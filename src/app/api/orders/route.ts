@@ -129,8 +129,8 @@ export async function POST(request: NextRequest) {
 
     // Initier le paiement Moneroo si sélectionné
     if (paymentMethod === 'moneroo') {
-      const MONEROO_URL = process.env.MONEROO_URL || 'https://hooks.moneroo.io/ho_g2ozy8hh46l5'
-      const MONEROO_SECRET = process.env.MONEROO_SECRET || 'ih_01KYQX8F6XYP5482DCT1XSBEA7_3isfvogqqp5e_j4DvpIVxqaiz'
+      const MONEROO_URL = process.env.MONEROO_URL || 'https://hooks.moneroo.io/ho_7rd8rwv2083s'
+      const MONEROO_SECRET = process.env.MONEROO_SECRET || 'ih_01KYQX8F6XYP5482DCT1XSBEA7_ccmy2l0a4gyk_RNbbQBsyOcAw'
       const returnUrl = request.headers.get('origin') ? `${request.headers.get('origin')}/success` : 'http://localhost:3000/success'
 
       const monerooResponse = await fetch(MONEROO_URL, {

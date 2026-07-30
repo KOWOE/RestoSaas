@@ -6,8 +6,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { amount, currency, description, customer, orderId, returnUrl } = body
 
-    const MONEROO_URL = process.env.MONEROO_URL || 'https://hooks.moneroo.io/ho_g2ozy8hh46l5'
-    const MONEROO_SECRET = process.env.MONEROO_SECRET || 'ih_01KYQX8F6XYP5482DCT1XSBEA7_3isfvogqqp5e_j4DvpIVxqaiz'
+    const MONEROO_URL = process.env.MONEROO_URL || 'https://hooks.moneroo.io/ho_7rd8rwv2083s'
+    const MONEROO_SECRET = process.env.MONEROO_SECRET || 'ih_01KYQX8F6XYP5482DCT1XSBEA7_ccmy2l0a4gyk_RNbbQBsyOcAw'
 
     // Appeler le webhook Moneroo
     const response = await fetch(MONEROO_URL, {
