@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     // Initier le paiement Moneroo si sélectionné
     if (paymentMethod === 'moneroo') {
       const MONEROO_URL = process.env.MONEROO_URL || 'https://api.moneroo.io/v1/payments/initialize'
-      const MONEROO_SECRET = process.env.MONEROO_SECRET || 'ih_01KYQX8F6XYP5482DCT1XSBEA7_ccmy2l0a4gyk_RNbbQBsyOcAw'
+      const MONEROO_SECRET = process.env.MONEROO_SECRET || 'pvk_sandbox_xd3hbu|01KYSKY0QD9EM65FAXFVK2ZKN6'
       const returnUrl = request.headers.get('origin') ? `${request.headers.get('origin')}/success` : 'http://localhost:3000/success'
 
       const monerooResponse = await fetch(MONEROO_URL, {
@@ -144,9 +144,9 @@ export async function POST(request: NextRequest) {
           currency: restaurant?.currency || 'XOF',
           description: `Commande ${order.orderNumber}`,
           customer: {
-            email: customerEmail || 'client@example.com',
+            email: 'client@example.com',
             first_name: customerName?.split(' ')[0] || 'Client',
-            last_name: customerName?.split(' ').slice(1).join(' ') || '',
+            last_name: customerName?.split(' ').slice(1).join(' ') || 'Client',
             phone: customerPhone || ''
           },
           return_url: returnUrl,
