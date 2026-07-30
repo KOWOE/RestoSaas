@@ -127,6 +127,44 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Initier le paiement Moneroo si sélectionné
+    if (paymentMethod === 'moneroo') {
+      const MONEROO_URL = process.env.MONEROO_URL || 'https://hooks.moneroo.io/ho_g2ozy8hh46l5'
+      const MONEROO_SECRET = process.env.MONEROO_SECRET || 'ih_01KYQX8F6XYP5482DCT1XSBEA7_3isfvogqqp5e_j4DvpIVxqaiz'
+      const returnUrl = request.headers.get('origin') ? `${request.headers.get('origin')}/success` : 'http://localhost:3000/success'
+
+      const monerooResponse = await fetch(MONEROO_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${MONEROO_SECRET}`
+        },
+        body: JSON.stringify({
+          amount: Math.round(order.total),
+          currency: restaurant?.currency || 'XOF',
+          description: `Commande ${order.orderNumber}`,
+          customer: {
+            email: customerEmail || 'client@example.com',
+            first_name: customerName?.split(' ')[0] || 'Client',
+            last_name: customerName?.split(' ').slice(1).join(' ') || '',
+            phone: customerPhone || ''
+          },
+          return_url: returnUrl,
+          metadata: {
+            orderId: order.id
+          }
+        })
+      })
+
+      if (monerooResponse.ok) {
+        const monerooData = await monerooResponse.json()
+        return NextResponse.json({ ...order, paymentData: monerooData })
+      } else {
+        console.error('Moneroo error:', await monerooResponse.text())
+        // On retourne quand même la commande si l'initiation du paiement échoue
+      }
+    }
+
     return NextResponse.json(order)
   } catch (error: any) {
     console.error('Error creating order:', error)
