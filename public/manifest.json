@@ -59,31 +59,6 @@
       "purpose": "maskable any"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshots/home.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Menu Digital"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Voir le menu",
-      "short_name": "Menu",
-      "description": "Accéder au menu du restaurant",
-      "url": "/?tab=home",
-      "icons": [{ "src": "/icons/menu-icon.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Mon panier",
-      "short_name": "Panier",
-      "description": "Voir mon panier",
-      "url": "/?tab=cart",
-      "icons": [{ "src": "/icons/cart-icon.png", "sizes": "96x96" }]
-    }
-  ],
   "related_applications": [],
   "prefer_related_applications": false
 }
