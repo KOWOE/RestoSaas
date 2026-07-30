@@ -1,6 +1,8 @@
 import { db } from "@/lib/db"
 import { CheckoutClient } from "./checkout-client"
 
+export const dynamic = 'force-dynamic'
+
 export default async function TestCheckoutPage() {
   // Récupérer le premier restaurant (ou un spécifique si besoin)
   const restaurant = await db.restaurant.findFirst({
