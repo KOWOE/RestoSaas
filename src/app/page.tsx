@@ -226,7 +226,7 @@ const emptyProductForm: ProductForm = {
 }
 
 export default function RestaurantApp() {
-  const { items, addItem, updateQuantity, clearCart, getTotal, getItemCount } = useCartStore()
+  const { items, addItem, removeItem, updateQuantity, clearCart, getTotal, getItemCount } = useCartStore()
   const { currentRestaurant, setRestaurant, tableNumber, setTable } = useRestaurantStore()
   const { user, isAuthenticated, login, logout } = useAuthStore()
   
@@ -399,6 +399,7 @@ export default function RestaurantApp() {
 
   // Handle checkout
   const handleCheckout = async () => {
+    if (isSubmittingCheckout) return;
     if (!customerInfo.name || !customerInfo.phone) {
       toast.error('Veuillez remplir vos informations')
       return
@@ -498,32 +499,12 @@ export default function RestaurantApp() {
       }
 
       // 2. Ensuite, gérer le paiement Mobile Money
-      if (paymentMethod === 'moneroo') {
-        const res = await fetch('/api/payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: order.total,
-            currency: restaurant?.currency || 'XOF',
-            description: `Commande ${orderNumber}`,
-            customer: {
-              email: '',
-              first_name: customerInfo.name,
-              last_name: ''
-            }
-          })
-        });
-        
-        let data: any = {};
-        try {
-          data = await res.json();
-        } catch(e) {}
-        
-        if (data.success || data.fullData?.success) {
-          toast.success('Paiement initié ! Veuillez valider sur votre téléphone (Mobile Money / Mobile Money).');
-        } else {
-          toast.error('Erreur d\'initialisation du paiement Mobile Money. Paiement à la livraison.');
-        }
+      if (paymentMethod === 'moneroo' && order.paymentData?.data?.checkout_url) {
+        toast.success('Redirection vers le paiement sécurisé...');
+        window.location.href = order.paymentData.data.checkout_url;
+        return;
+      } else if (paymentMethod === 'moneroo') {
+        toast.error("Impossible d'initier le paiement. Redirection ignorée.");
       } else {
         toast.success(`Commande ${orderNumber} créée ! ${isMock ? '(Simulée)' : ''}`);
       }
@@ -1847,6 +1828,7 @@ export default function RestaurantApp() {
                       <p className="text-amber-600 font-semibold text-sm">{formatCurrency(item.price, restaurant?.currency)}</p>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 mr-2" onClick={() => removeItem(item.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
                       <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="w-3 h-3" /></Button>
                       <span className="w-6 text-center font-medium">{item.quantity}</span>
                       <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="w-3 h-3" /></Button>
