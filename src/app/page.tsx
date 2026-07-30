@@ -244,7 +244,7 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', notes: '' })
   const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in')
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'assazara'>('assazara')
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'assazara' | 'mobile_money'>('mobile_money')
   
   // Login state
   const [loginModalOpen, setLoginModalOpen] = useState(false)
@@ -1949,7 +1949,7 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
             <div>
               <Label>Moyen de paiement</Label>
               <div className="flex gap-2 mt-2">
-                <Button variant={paymentMethod === 'assazara' ? 'default' : 'outline'} className={cn("flex-1", paymentMethod === 'assazara' && "bg-amber-500 hover:bg-amber-600")} onClick={() => setPaymentMethod('assazara')}><CreditCard className="w-4 h-4 mr-2" />AssaZara</Button>
+                <Button variant={paymentMethod === 'mobile_money' || paymentMethod === 'assazara' ? 'default' : 'outline'} className={cn("flex-1", (paymentMethod === 'mobile_money' || paymentMethod === 'assazara') && "bg-amber-500 hover:bg-amber-600")} onClick={() => setPaymentMethod('mobile_money')}><CreditCard className="w-4 h-4 mr-2" />Mobile Money</Button>
                 <Button variant={paymentMethod === 'cash' ? 'default' : 'outline'} className={cn("flex-1", paymentMethod === 'cash' && "bg-amber-500 hover:bg-amber-600")} onClick={() => setPaymentMethod('cash')}><DollarSign className="w-4 h-4 mr-2" />Espèces</Button>
               </div>
             </div>
