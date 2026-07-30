@@ -291,9 +291,11 @@ export default function RestaurantApp() {
         const res = await fetch('/api/restaurants?slug=le-jardin-savoureux')
         const data = await res.json()
         
-        if (data && data.id) {
+        if (!data.error) {
           setRestaurantData(data)
-          setRestaurant(data.id, data.name)
+          if (!currentRestaurant || currentRestaurant !== data.id) {
+            setRestaurant(data.id, data.name)
+          }
         } else {
           setRestaurantData(DEMO_RESTAURANT)
           setRestaurant(DEMO_RESTAURANT.id, DEMO_RESTAURANT.name)
