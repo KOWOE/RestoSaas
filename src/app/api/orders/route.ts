@@ -160,8 +160,9 @@ export async function POST(request: NextRequest) {
         const monerooData = await monerooResponse.json()
         return NextResponse.json({ ...order, paymentData: monerooData })
       } else {
-        console.error('Moneroo error:', await monerooResponse.text())
-        // On retourne quand même la commande si l'initiation du paiement échoue
+        const errorText = await monerooResponse.text()
+        console.error('Moneroo error:', errorText)
+        return NextResponse.json({ ...order, paymentError: errorText })
       }
     }
 

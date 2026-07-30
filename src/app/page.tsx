@@ -504,7 +504,16 @@ export default function RestaurantApp() {
         window.location.href = order.paymentData.data.checkout_url;
         return;
       } else if (paymentMethod === 'moneroo') {
-        toast.error("Impossible d'initier le paiement. Redirection ignorée.");
+        let errorMsg = "Impossible d'initier le paiement.";
+        if (order.paymentError) {
+          try {
+            const parsed = JSON.parse(order.paymentError);
+            errorMsg = `Moneroo: ${parsed.message || order.paymentError}`;
+          } catch(e) {
+            errorMsg = `Moneroo: ${order.paymentError}`;
+          }
+        }
+        toast.error(errorMsg);
       } else {
         toast.success(`Commande ${orderNumber} créée ! ${isMock ? '(Simulée)' : ''}`);
       }
