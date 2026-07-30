@@ -268,6 +268,7 @@ export default function RestaurantApp() {
   const [searchType, setSearchType] = useState<'orderNumber' | 'phone'>('orderNumber')
   const [searchValue, setSearchValue] = useState('')
   const [searching, setSearching] = useState(false)
+  const [isSubmittingCheckout, setIsSubmittingCheckout] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<TrackedOrder | null>(null)
 
   // Settings state
@@ -401,6 +402,7 @@ export default function RestaurantApp() {
       return
     }
 
+    setIsSubmittingCheckout(true)
     try {
       let order: any = null;
       let orderNumber = `ORD-${Date.now().toString(36).toUpperCase().substring(0, 8)}`;
@@ -535,6 +537,8 @@ export default function RestaurantApp() {
 
     } catch (e) {
       toast.error('Erreur lors de la création')
+    } finally {
+      setIsSubmittingCheckout(false)
     }
   }
 
@@ -1897,7 +1901,7 @@ export default function RestaurantApp() {
             <div><Label htmlFor="notes">Notes (optionnel)</Label><Textarea id="notes" value={customerInfo.notes} onChange={(e) => setCustomerInfo({ ...customerInfo, notes: e.target.value })} placeholder="Instructions spéciales..." rows={2} /></div>
             <Separator />
             <div className="flex justify-between font-bold text-lg"><span>Total à payer</span><span className="text-amber-600">{formatCurrency(getTotal() * (1 + (restaurant?.taxRate || 0.18)), restaurant?.currency)}</span></div>
-            <DialogFooter><Button variant="outline" onClick={() => setCheckoutOpen(false)}>Annuler</Button><Button className="bg-amber-500 hover:bg-amber-600" onClick={handleCheckout} disabled={!customerInfo.name || !customerInfo.phone}>Confirmer</Button></DialogFooter>
+            <DialogFooter><Button variant="outline" onClick={() => setCheckoutOpen(false)} disabled={isSubmittingCheckout}>Annuler</Button><Button className="bg-amber-500 hover:bg-amber-600" onClick={handleCheckout} disabled={!customerInfo.name || !customerInfo.phone || isSubmittingCheckout}>{isSubmittingCheckout ? 'En cours...' : 'Confirmer'}</Button></DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
