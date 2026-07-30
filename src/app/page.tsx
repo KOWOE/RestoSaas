@@ -422,6 +422,7 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
 
   // Handle checkout
   const handleCheckout = async () => {
+    if (isSubmittingCheckout) return
     if (!customerInfo.name || !customerInfo.phone) {
       toast.error('Veuillez remplir vos informations')
       return
@@ -432,6 +433,7 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
       let order: any = null;
       let orderNumber = `ORD-${Date.now().toString(36).toUpperCase().substring(0, 8)}`;
       let isMock = false;
+      let checkoutUrl: string | null = null;
 
       // 1. D'abord, créer la vraie commande en base de données (si ce n'est pas le mode démo)
       if (restaurant?.id === 'demo-restaurant') {
@@ -483,6 +485,7 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
           if (res.ok && data.id) {
             order = data;
             orderNumber = order.orderNumber;
+            checkoutUrl = data.checkoutUrl || data.paymentData?.checkout_url || data.paymentData?.data?.checkout_url || null;
           } else {
             console.error('API Orders Error:', data);
             toast.error(`Erreur Serveur: ${data.error || 'Erreur inconnue'}`);
@@ -493,7 +496,7 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
         }
       }
 
-      // Si l'API a échoué (order est null)
+      // Si l'API a échoué (order est null), secours démo
       if (!order && !isMock) {
         order = {
           id: `mock-${Date.now()}`,
@@ -520,45 +523,52 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
         isMock = true;
       }
 
-      // 2. Ensuite, gérer le paiement AssaZara
-      if (paymentMethod === 'assazara') {
-        const res = await fetch('/api/payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: order.total,
-            currency: restaurant?.currency || 'XOF',
-            description: `Commande ${orderNumber}`,
-            customer: {
-              email: '',
-              first_name: customerInfo.name,
-              last_name: ''
-            }
-          })
-        });
+      // 2. Gérer le paiement Moneroo / Mobile Money
+      if (paymentMethod === 'assazara' || paymentMethod === 'moneroo' || paymentMethod === 'mobile_money') {
+        if (!checkoutUrl) {
+          try {
+            const res = await fetch('/api/payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                amount: Math.round(order.total),
+                currency: restaurant?.currency || 'XOF',
+                description: `Commande ${orderNumber}`,
+                orderId: order.id,
+                customer: {
+                  email: '',
+                  first_name: customerInfo.name,
+                  last_name: ''
+                }
+              })
+            });
+            const data = await res.json();
+            checkoutUrl = data.checkoutUrl || data.fullData?.checkout_url || data.fullData?.data?.checkout_url || null;
+          } catch(e) {}
+        }
         
-        let data: any = {};
-        try {
-          data = await res.json();
-        } catch(e) {}
-        
-        if (data.success || data.fullData?.success) {
-          toast.success('Paiement initié ! Veuillez valider sur votre téléphone (Mobile Money / AssaZara).');
+        if (checkoutUrl) {
+          toast.success('Commande validée ! Redirection vers la page de paiement Moneroo...');
+          setTimeout(() => {
+            window.location.href = checkoutUrl!;
+          }, 1000);
         } else {
-          toast.error('Erreur d\'initialisation du paiement AssaZara. Paiement à la livraison.');
+          toast.success(`Commande ${orderNumber} enregistrée !`);
         }
       } else {
-        toast.success(`Commande ${orderNumber} créée ! ${isMock ? '(Simulée)' : ''}`);
+        toast.success(`Commande ${orderNumber} créée avec succès !`);
       }
 
-      // 3. Vider le panier et rediriger vers le suivi
+      // 3. Vider le panier et réinitialiser
       clearCart();
       setCheckoutOpen(false);
       setCustomerInfo({ name: '', phone: '', notes: '' });
       setCustomerPhone(customerInfo.phone);
       addTrackedOrder(order);
-      setViewMode('tracking');
-      setSearchValue(orderNumber);
+      if (!checkoutUrl) {
+        setViewMode('tracking');
+        setSearchValue(orderNumber);
+      }
 
     } catch (e) {
       toast.error('Erreur lors de la création')

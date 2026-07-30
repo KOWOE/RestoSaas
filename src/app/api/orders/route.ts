@@ -127,6 +127,50 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Initier le paiement Moneroo si sélectionné
+    if (paymentMethod === 'moneroo' || paymentMethod === 'assazara' || paymentMethod === 'mobile_money') {
+      try {
+        const MONEROO_URL = process.env.MONEROO_URL || 'https://hooks.moneroo.io/ho_7rd8rwv2083s'
+        const MONEROO_SECRET = process.env.MONEROO_SECRET || 'ih_01KYQX8F6XYP5482DCT1XSBEA7_ccmy2l0a4gyk_RNbbQBsyOcAw'
+        const returnUrl = request.headers.get('origin') ? `${request.headers.get('origin')}/success` : 'http://localhost:3000/success'
+
+        const monerooResponse = await fetch(MONEROO_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${MONEROO_SECRET}`
+          },
+          body: JSON.stringify({
+            amount: Math.round(order.total),
+            currency: restaurant?.currency || 'XOF',
+            description: `Commande ${order.orderNumber}`,
+            customer: {
+              email: customerEmail || 'client@example.com',
+              first_name: customerName?.split(' ')[0] || 'Client',
+              last_name: customerName?.split(' ').slice(1).join(' ') || 'Client',
+              phone: customerPhone || ''
+            },
+            return_url: returnUrl,
+            metadata: {
+              orderId: order.id
+            }
+          })
+        })
+
+        if (monerooResponse.ok) {
+          const monerooData = await monerooResponse.json()
+          const checkoutUrl = monerooData?.checkout_url || monerooData?.checkoutUrl || monerooData?.data?.checkout_url || monerooData?.data?.url || monerooData?.url || null
+          return NextResponse.json({ ...order, checkoutUrl, paymentData: monerooData })
+        } else {
+          const errorText = await monerooResponse.text()
+          console.error('Moneroo error:', errorText)
+          return NextResponse.json({ ...order, paymentError: errorText })
+        }
+      } catch (err) {
+        console.error('Error triggering Moneroo payment:', err)
+      }
+    }
+
     return NextResponse.json(order)
   } catch (error: any) {
     console.error('Error creating order:', error)
