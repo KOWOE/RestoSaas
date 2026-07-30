@@ -6,10 +6,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { amount, currency, description, customer, orderId, returnUrl } = body
 
-    const MONEROO_URL = process.env.MONEROO_URL || 'https://hooks.moneroo.io/ho_7rd8rwv2083s'
-    const MONEROO_SECRET = process.env.MONEROO_SECRET || 'ih_01KYQX8F6XYP5482DCT1XSBEA7_ccmy2l0a4gyk_RNbbQBsyOcAw'
+    const MONEROO_URL = process.env.MONEROO_URL || 'https://api.moneroo.io/v1/payments/initialize'
+    const MONEROO_SECRET = process.env.MONEROO_SECRET || 'pvk_sandbox_xd3hbu|01KYSKY0QD9EM65FAXFVK2ZKN6'
+    const defaultReturnUrl = request.headers.get('origin') ? `${request.headers.get('origin')}/success` : 'https://resto-saas-roan.vercel.app/success'
 
-    // Appeler le webhook Moneroo
+    // Moneroo Sandbox requires USD or enabled currency
+    const numAmount = Number(amount) || 1000
+    const finalAmount = currency === 'XOF' ? Math.max(1, Math.round(numAmount / 600)) : numAmount
+    const finalCurrency = currency === 'XOF' ? 'USD' : (currency || 'USD')
+
+    // Appeler l'API Moneroo
     const response = await fetch(MONEROO_URL, {
       method: 'POST',
       headers: {
@@ -17,11 +23,15 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${MONEROO_SECRET}`
       },
       body: JSON.stringify({
-        amount,
-        currency: currency || 'XOF',
-        description,
-        customer,
-        return_url: returnUrl || 'http://localhost:3000',
+        amount: finalAmount,
+        currency: finalCurrency,
+        description: description || 'Commande RestoSaas',
+        customer: {
+          email: customer?.email || 'client@example.com',
+          first_name: customer?.first_name || customer?.name || 'Client',
+          last_name: customer?.last_name || ''
+        },
+        return_url: returnUrl || defaultReturnUrl,
         metadata: {
           orderId
         }
@@ -35,10 +45,10 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json()
-    console.log("Moneroo Webhook Response:", data)
+    console.log("Moneroo API Response:", data)
     
-    // Extrait l'URL de paiement Moneroo s'il y en a une
-    const checkoutUrl = data?.checkout_url || data?.checkoutUrl || data?.payment_url || data?.url || data?.data?.checkout_url || data?.data?.url || null
+    // Extrait l'URL de paiement Moneroo
+    const checkoutUrl = data?.data?.checkout_url || data?.checkout_url || data?.checkoutUrl || data?.data?.url || data?.url || null
 
     return NextResponse.json({ 
       success: true,
