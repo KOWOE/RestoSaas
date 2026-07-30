@@ -17,7 +17,7 @@ export default async function TestCheckoutPage() {
         <div className="bg-card p-8 rounded-2xl shadow-sm border border-border text-center max-w-md w-full">
           <h1 className="text-2xl font-bold text-foreground mb-2">Aucun restaurant trouvé</h1>
           <p className="text-muted-foreground mb-6">
-            Vous devez d'abord créer un restaurant et un produit.
+            Vous devez d'abord créer un restaurant et un plat.
           </p>
         </div>
       </div>
@@ -30,9 +30,9 @@ export default async function TestCheckoutPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="bg-card p-8 rounded-2xl shadow-sm border border-border text-center max-w-md w-full">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Aucun produit trouvé</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Aucun plat trouvé</h1>
           <p className="text-muted-foreground mb-6">
-            Exécutez le script create-product.js pour créer un produit de test.
+            Exécutez le script create-product.js pour créer un plat de test.
           </p>
         </div>
       </div>

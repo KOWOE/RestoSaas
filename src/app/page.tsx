@@ -239,7 +239,7 @@ export default function RestaurantApp() {
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', notes: '' })
   const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in')
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'assazara'>('assazara')
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'moneroo'>('moneroo')
   
   // Login state
   const [loginModalOpen, setLoginModalOpen] = useState(false)
@@ -497,8 +497,8 @@ export default function RestaurantApp() {
         isMock = true;
       }
 
-      // 2. Ensuite, gérer le paiement AssaZara
-      if (paymentMethod === 'assazara') {
+      // 2. Ensuite, gérer le paiement Mobile Money
+      if (paymentMethod === 'moneroo') {
         const res = await fetch('/api/payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -520,9 +520,9 @@ export default function RestaurantApp() {
         } catch(e) {}
         
         if (data.success || data.fullData?.success) {
-          toast.success('Paiement initié ! Veuillez valider sur votre téléphone (Mobile Money / AssaZara).');
+          toast.success('Paiement initié ! Veuillez valider sur votre téléphone (Mobile Money / Mobile Money).');
         } else {
-          toast.error('Erreur d\'initialisation du paiement AssaZara. Paiement à la livraison.');
+          toast.error('Erreur d\'initialisation du paiement Mobile Money. Paiement à la livraison.');
         }
       } else {
         toast.success(`Commande ${orderNumber} créée ! ${isMock ? '(Simulée)' : ''}`);
@@ -626,7 +626,7 @@ export default function RestaurantApp() {
   // Generate AI image
   const generateAIImage = async () => {
     if (!productForm.name) {
-      toast.error('Veuillez entrer le nom du produit d\'abord')
+      toast.error('Veuillez entrer le nom du plat d\'abord')
       return
     }
 
@@ -690,7 +690,7 @@ export default function RestaurantApp() {
       })
 
       if (res.ok) {
-        toast.success(isEditing ? 'Produit modifié!' : 'Produit ajouté!')
+        toast.success(isEditing ? 'Plat modifié!' : 'Plat ajouté!')
         setProductModalOpen(false)
         refreshRestaurantData()
       }
@@ -707,7 +707,7 @@ export default function RestaurantApp() {
       })
 
       if (res.ok) {
-        toast.success('Produit supprimé!')
+        toast.success('Plat supprimé!')
         setDeleteProductId(null)
         refreshRestaurantData()
       }
@@ -1558,7 +1558,7 @@ export default function RestaurantApp() {
               <Tabs value={dashboardTab} onValueChange={setDashboardTab} className="space-y-4">
                 <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
                   <TabsTrigger value="orders" className="gap-2"><ChefHat className="w-4 h-4" />Commandes</TabsTrigger>
-                  <TabsTrigger value="products" className="gap-2"><Package className="w-4 h-4" />Produits</TabsTrigger>
+                  <TabsTrigger value="products" className="gap-2"><Package className="w-4 h-4" />Plats</TabsTrigger>
                   <TabsTrigger value="settings" className="gap-2"><Settings className="w-4 h-4" />Paramètres</TabsTrigger>
                 </TabsList>
 
@@ -1618,8 +1618,8 @@ export default function RestaurantApp() {
                 <TabsContent value="products">
                   <Card className="border-slate-200 shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between">
-                      <CardTitle className="flex items-center gap-2"><Package className="w-5 h-5 text-amber-500" />Gestion des Produits</CardTitle>
-                      <Button onClick={openAddProduct} className="bg-amber-500 hover:bg-amber-600"><Plus className="w-4 h-4 mr-2" />Nouveau Produit</Button>
+                      <CardTitle className="flex items-center gap-2"><Package className="w-5 h-5 text-amber-500" />Gestion des Plats</CardTitle>
+                      <Button onClick={openAddProduct} className="bg-amber-500 hover:bg-amber-600"><Plus className="w-4 h-4 mr-2" />Nouveau Plat</Button>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1636,7 +1636,7 @@ export default function RestaurantApp() {
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild><Button size="sm" variant="destructive" className="h-8 w-8 p-0"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
                                   <AlertDialogContent>
-                                    <AlertDialogHeader><AlertDialogTitle>Supprimer le produit?</AlertDialogTitle><AlertDialogDescription>Cette action est irréversible. Le produit "{product.name}" sera définitivement supprimé.</AlertDialogDescription></AlertDialogHeader>
+                                    <AlertDialogHeader><AlertDialogTitle>Supprimer le plat?</AlertDialogTitle><AlertDialogDescription>Cette action est irréversible. Le plat "{product.name}" sera définitivement supprimé.</AlertDialogDescription></AlertDialogHeader>
                                     <AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction onClick={() => deleteProduct(product.id)} className="bg-red-500 hover:bg-red-600">Supprimer</AlertDialogAction></AlertDialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>
@@ -1894,7 +1894,7 @@ export default function RestaurantApp() {
             <div>
               <Label>Moyen de paiement</Label>
               <div className="flex gap-2 mt-2">
-                <Button variant={paymentMethod === 'assazara' ? 'default' : 'outline'} className={cn("flex-1", paymentMethod === 'assazara' && "bg-amber-500 hover:bg-amber-600")} onClick={() => setPaymentMethod('assazara')}><CreditCard className="w-4 h-4 mr-2" />AssaZara</Button>
+                <Button variant={paymentMethod === 'moneroo' ? 'default' : 'outline'} className={cn("flex-1", paymentMethod === 'moneroo' && "bg-amber-500 hover:bg-amber-600")} onClick={() => setPaymentMethod('moneroo')}><CreditCard className="w-4 h-4 mr-2" />Mobile Money</Button>
                 <Button variant={paymentMethod === 'cash' ? 'default' : 'outline'} className={cn("flex-1", paymentMethod === 'cash' && "bg-amber-500 hover:bg-amber-600")} onClick={() => setPaymentMethod('cash')}><DollarSign className="w-4 h-4 mr-2" />Espèces</Button>
               </div>
             </div>
@@ -1912,11 +1912,11 @@ export default function RestaurantApp() {
       <Dialog open={productModalOpen} onOpenChange={setProductModalOpen}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isEditing ? 'Modifier le Produit' : 'Nouveau Produit'}</DialogTitle>
-            <DialogDescription>Remplissez les informations du produit</DialogDescription>
+            <DialogTitle>{isEditing ? 'Modifier le Plat' : 'Nouveau Plat'}</DialogTitle>
+            <DialogDescription>Remplissez les informations du plat</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div><Label htmlFor="productName">Nom du produit *</Label><Input id="productName" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} placeholder="Ex: Poulet Moambé" /></div>
+            <div><Label htmlFor="productName">Nom du plat *</Label><Input id="productName" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} placeholder="Ex: Poulet Moambé" /></div>
             <div><Label htmlFor="productDescription">Description</Label><Textarea id="productDescription" value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} placeholder="Description du plat..." rows={2} /></div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label htmlFor="productPrice">Prix (XOF) *</Label><Input id="productPrice" type="number" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} placeholder="5000" /></div>
@@ -1931,7 +1931,7 @@ export default function RestaurantApp() {
 
             {/* Image Upload Section */}
             <div className="space-y-3">
-              <Label>Image du produit</Label>
+              <Label>Image du plat</Label>
               
               {/* Image Preview */}
               {productForm.image && (
