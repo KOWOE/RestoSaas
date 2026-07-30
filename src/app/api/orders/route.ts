@@ -140,8 +140,8 @@ export async function POST(request: NextRequest) {
           'Authorization': `Bearer ${MONEROO_SECRET}`
         },
         body: JSON.stringify({
-          amount: Math.round(order.total),
-          currency: restaurant?.currency || 'XOF',
+          amount: Math.max(1, Math.round(order.total / 600)), // Convertir en USD approx pour test
+          currency: 'USD', // Forcer USD car XOF n'est pas activé dans le sandbox Moneroo du client
           description: `Commande ${order.orderNumber}`,
           customer: {
             email: 'client@example.com',
