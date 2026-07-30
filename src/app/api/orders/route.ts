@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
             currency: finalCurrency,
             description: `Commande ${order.orderNumber}`,
             customer: {
-              email: customerEmail || 'client@example.com',
+              email: (customerEmail && customerEmail.includes('@')) ? customerEmail : 'client@resto-saas.com',
               first_name: customerName?.split(' ')[0] || 'Client',
               last_name: customerName?.split(' ').slice(1).join(' ') || 'Client',
               phone: customerPhone || ''

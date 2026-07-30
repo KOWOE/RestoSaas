@@ -27,9 +27,9 @@ export async function POST(request: NextRequest) {
         currency: finalCurrency,
         description: description || 'Commande RestoSaas',
         customer: {
-          email: customer?.email || 'client@example.com',
+          email: (customer?.email && customer?.email.includes('@')) ? customer.email : 'client@resto-saas.com',
           first_name: customer?.first_name || customer?.name || 'Client',
-          last_name: customer?.last_name || ''
+          last_name: customer?.last_name || 'Client'
         },
         return_url: returnUrl || defaultReturnUrl,
         metadata: {

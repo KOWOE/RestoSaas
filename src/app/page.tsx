@@ -230,7 +230,7 @@ interface RestaurantAppProps {
 }
 
 export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
-  const { items, addItem, updateQuantity, clearCart, getTotal, getItemCount } = useCartStore()
+  const { items, addItem, removeItem, updateQuantity, clearCart, getTotal, getItemCount } = useCartStore()
   const { currentRestaurant, setRestaurant, tableNumber, setTable } = useRestaurantStore()
   const { user, isAuthenticated, login, logout } = useAuthStore()
   
@@ -549,9 +549,8 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
         
         if (checkoutUrl) {
           toast.success('Commande validée ! Redirection vers la page de paiement Moneroo...');
-          setTimeout(() => {
-            window.location.href = checkoutUrl!;
-          }, 1000);
+          window.location.href = checkoutUrl;
+          return;
         } else {
           toast.success(`Commande ${orderNumber} enregistrée !`);
         }
@@ -1901,9 +1900,18 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
                       <p className="font-medium text-slate-900 text-sm truncate">{item.name}</p>
                       <p className="text-amber-600 font-semibold text-sm">{formatCurrency(item.price, restaurant?.currency)}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors mr-1" 
+                        title="Supprimer du panier" 
+                        onClick={() => removeItem(item.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                       <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="w-3 h-3" /></Button>
-                      <span className="w-6 text-center font-medium">{item.quantity}</span>
+                      <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
                       <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="w-3 h-3" /></Button>
                     </div>
                   </div>
