@@ -225,13 +225,18 @@ const emptyProductForm: ProductForm = {
   isFeatured: false,
 }
 
-export default function RestaurantApp() {
+interface RestaurantAppProps {
+  targetSlug?: string
+}
+
+export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
   const { items, addItem, updateQuantity, clearCart, getTotal, getItemCount } = useCartStore()
   const { currentRestaurant, setRestaurant, tableNumber, setTable } = useRestaurantStore()
   const { user, isAuthenticated, login, logout } = useAuthStore()
   
   const [restaurant, setRestaurantData] = useState<Restaurant | null>(null)
   const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('menu')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -286,30 +291,48 @@ export default function RestaurantApp() {
   // Initialize restaurant
   useEffect(() => {
     const initRestaurant = async () => {
+      setLoading(true)
+      setNotFound(false)
+      const slugToFetch = targetSlug || 'le-jardin-savoureux'
+
       try {
-        await fetch('/api/seed')
-        const res = await fetch('/api/restaurants?slug=le-jardin-savoureux')
-        const data = await res.json()
+        let res = await fetch(`/api/restaurants?slug=${encodeURIComponent(slugToFetch)}`)
+        let data = await res.json()
         
-        if (!data.error) {
+        if (!res.ok || data?.error || !data?.id) {
+          // If default/demo slug or fetch failed, attempt seed
+          if (slugToFetch === 'le-jardin-savoureux') {
+            await fetch('/api/seed')
+            res = await fetch('/api/restaurants?slug=le-jardin-savoureux')
+            data = await res.json()
+          }
+        }
+
+        if (data && data.id && !data.error) {
           setRestaurantData(data)
           if (!currentRestaurant || currentRestaurant !== data.id) {
             setRestaurant(data.id, data.name)
           }
-        } else {
+        } else if (slugToFetch === 'le-jardin-savoureux') {
           setRestaurantData(DEMO_RESTAURANT)
           setRestaurant(DEMO_RESTAURANT.id, DEMO_RESTAURANT.name)
+        } else {
+          setNotFound(true)
         }
       } catch {
-        setRestaurantData(DEMO_RESTAURANT)
-        setRestaurant(DEMO_RESTAURANT.id, DEMO_RESTAURANT.name)
+        if (slugToFetch === 'le-jardin-savoureux') {
+          setRestaurantData(DEMO_RESTAURANT)
+          setRestaurant(DEMO_RESTAURANT.id, DEMO_RESTAURANT.name)
+        } else {
+          setNotFound(true)
+        }
       } finally {
         setLoading(false)
       }
     }
     
     initRestaurant()
-  }, [setRestaurant])
+  }, [targetSlug, setRestaurant])
 
   // Initialize settings form when restaurant loads
   useEffect(() => {
@@ -914,6 +937,28 @@ export default function RestaurantApp() {
           </motion.div>
           <p className="text-slate-600 font-medium">Chargement...</p>
         </motion.div>
+      </div>
+    )
+  }
+
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 bg-amber-100/90 rounded-full flex items-center justify-center mb-6 shadow-sm">
+          <UtensilsCrossed className="w-10 h-10 text-amber-500" />
+        </div>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">
+          Restaurant introuvable
+        </h1>
+        <p className="text-slate-500 font-normal mb-8 max-w-md">
+          Ce restaurant n'existe pas ou a été désactivé.
+        </p>
+        <Button 
+          onClick={() => window.location.href = '/'}
+          className="bg-[#111827] hover:bg-slate-800 text-white font-medium px-8 py-6 rounded-full text-base shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
+          Retour à l'accueil
+        </Button>
       </div>
     )
   }
