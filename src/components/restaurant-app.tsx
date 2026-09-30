@@ -17,7 +17,8 @@ import {
   Navigation, MapPinned, Timer, Receipt, MessageCircle,
   AlertCircle, Truck, Store, Home, ClipboardList,
   Crown, ArrowRight, ArrowLeft, Building2,
-  Printer, ExternalLink, Share2, HelpCircle
+  Printer, ExternalLink, Share2, HelpCircle,
+  LayoutGrid, List, SlidersHorizontal, Info, ShieldCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -108,15 +109,15 @@ interface DashboardStats {
   dailyRevenue: { date: string; revenue: number; orders: number }[]
 }
 
-// Demo data
+// Demo data - Curated African & International Haute Gastronomie
 const DEMO_RESTAURANT: Restaurant = {
   id: 'demo-restaurant',
-  name: 'Zagoor',
-  slug: 'zagoor',
-  description: 'Restaurant gastronomique proposant une cuisine africaine moderne.',
+  name: 'Le Jardin Savoureux',
+  slug: 'le-jardin-savoureux',
+  description: 'Haute gastronomie africaine & grillades au feu de bois. Une expérience culinaire d’exception préparée à la minute avec des produits frais locaux.',
   logo: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&h=200&fit=crop',
-  banner: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&h=400&fit=crop',
-  address: 'Cotonou, Bénin',
+  banner: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&h=600&fit=crop',
+  address: 'Boulevard de la Marina, Cotonou, Bénin',
   phone: '+229 97 12 34 56',
   currency: 'XOF',
   taxRate: 0.18,
@@ -126,54 +127,74 @@ const DEMO_RESTAURANT: Restaurant = {
   categories: [
     {
       id: 'cat-1',
-      name: 'Entrées',
+      name: 'Entrées & Tapas',
       icon: '🥗',
-      description: 'Commencez votre repas en douceur',
+      description: 'Mises en bouche fraîches et créations artisanales du Chef',
       products: [
-        { id: 'p1', name: 'Salade de Mangue', description: 'Mangue fraîche, avocat, oignons rouges', price: 2500, image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 10, calories: 180, categoryId: 'cat-1' },
-        { id: 'p2', name: 'Brochettes de Crevettes', description: 'Crevettes marinées aux épices', price: 3500, image: 'https://images.unsplash.com/photo-1565680018093-ebb6b9ab5460?w=400&h=300&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 15, calories: 220, categoryId: 'cat-1' },
-        { id: 'p3', name: 'Acarajé', description: 'Beignets de haricots noirs traditionnels', price: 1500, image: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?w=400&h=300&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 8, calories: 280, categoryId: 'cat-1' },
+        { id: 'p1', name: 'Salade de Mangue & Avocat', description: 'Mangues fraîches locales, avocats crémeux, oignons rouges de Grand-Popo et vinaigrette au citron vert.', price: 2500, image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 10, calories: 180, categoryId: 'cat-1' },
+        { id: 'p2', name: 'Brochettes de Gambas Épicées', description: 'Grosses crevettes sauvages marinées au gingembre, ail confit et piment doux grillées à la flamme.', price: 3500, image: 'https://images.unsplash.com/photo-1559742811-822873691df8?w=600&h=450&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 15, calories: 220, categoryId: 'cat-1' },
+        { id: 'p3', name: 'Acarajé Traditionnel & Vatapa', description: 'Beignets croustillants de niébé garnis de pâte de crevettes séchées et sauce pimentée maison.', price: 1500, image: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 8, calories: 280, categoryId: 'cat-1' },
+        { id: 'p4-e', name: 'Pastels & Samoussas Dorés', description: 'Assortiment de 4 feuilletés croustillants au bœuf épicé et légumes croquants avec sauce tartare afrik.', price: 2000, image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&h=450&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 12, calories: 240, categoryId: 'cat-1' },
       ],
     },
     {
       id: 'cat-2',
       name: 'Plats Principaux',
-      icon: '🍽️',
-      description: 'Les spécialités de la maison',
+      icon: '🍲',
+      description: 'Les grands classiques réinventés avec raffinement',
       products: [
-        { id: 'p4', name: 'Poulet Moambé', description: 'Poulet fermier braisé sauce moambé', price: 5500, image: 'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=400&h=300&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 25, calories: 650, categoryId: 'cat-2' },
-        { id: 'p5', name: 'Thiéboudienne', description: 'Riz rouge au poisson, spécialité sénégalaise', price: 4500, image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&h=300&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 30, calories: 580, categoryId: 'cat-2' },
-        { id: 'p6', name: 'Poisson Braisé', description: 'Poisson grillé aux épices locales', price: 5000, image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=400&h=300&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 25, calories: 450, categoryId: 'cat-2' },
+        { id: 'p4', name: 'Poulet Moambé Prestige', description: 'Poulet fermier braisé mijoté dans une onctueuse sauce moambé aux noix de palme, riz parfumé et plantains.', price: 5500, image: 'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=600&h=450&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 25, calories: 650, categoryId: 'cat-2' },
+        { id: 'p5', name: 'Thiéboudienne Royale au Mérou', description: 'Riz rouge sénégalais mijoté au bouillon de poisson noble, légumes confits, tamarins et piments doux.', price: 4500, image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=600&h=450&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 30, calories: 580, categoryId: 'cat-2' },
+        { id: 'p6', name: 'Poisson Capitaine Braisé', description: 'Pavé de capitaine frais mariné aux épices du golfe de Guinée, grillé et servi avec attiéké et sauce moutarde.', price: 5000, image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 25, calories: 450, categoryId: 'cat-2' },
+        { id: 'p7-m', name: 'Mafé Fondant au Bœuf', description: 'Morceaux de bœuf braisés longuement dans une sauce arachide veloutée, carottes et patates douces.', price: 4800, image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 25, calories: 680, categoryId: 'cat-2' },
       ],
     },
     {
       id: 'cat-3',
-      name: 'Grillades',
+      name: 'Grillades au Feu de Bois',
       icon: '🔥',
-      description: 'Viandes et poissons grillés',
+      description: 'Viandes d’exception marinées et grillées à la braise',
       products: [
-        { id: 'p7', name: 'Brochettes de Bœuf', description: 'Bœuf mariné grillé sur feu de bois', price: 4000, image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 15, calories: 380, categoryId: 'cat-3' },
-        { id: 'p8', name: 'Côtes d\'Agneau', description: 'Côtes grillées, sauce moutarde', price: 7000, image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=300&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 20, calories: 520, categoryId: 'cat-3' },
+        { id: 'p7', name: 'Brochettes Suya de Bœuf', description: 'Fines lamelles de bœuf tendre assaisonnées aux épices kankankan et grillées au charbon de bois.', price: 4000, image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 15, calories: 380, categoryId: 'cat-3' },
+        { id: 'p8', name: 'Côtes d’Agneau Braisées', description: 'Côtes d’agneau sélectionnées, dorées à point, badigeonnées de beurre aux herbes et moutarde à l’ancienne.', price: 7000, image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=600&h=450&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 20, calories: 520, categoryId: 'cat-3' },
+        { id: 'p9-y', name: 'Poulet Yassa Grillé', description: 'Cuisse de poulet grillée nappée d’une compotée d’oignons caramélisés au citron vert et moutarde de Dijon.', price: 4500, image: 'https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 20, calories: 420, categoryId: 'cat-3' },
+        { id: 'p10-dg', name: 'Poulet DG aux Plantains', description: 'Dés de poulet sautés avec alloco croustillant, poivrons colorés, carottes et petits pois.', price: 6000, image: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 20, calories: 690, categoryId: 'cat-3' },
       ],
     },
     {
       id: 'cat-4',
-      name: 'Boissons',
-      icon: '🍹',
-      description: 'Rafraîchissements naturels',
+      name: 'Accompagnements',
+      icon: '🍚',
+      description: 'Le complément parfait pour sublimer votre repas',
       products: [
-        { id: 'p9', name: 'Jus de Bissap', description: 'Jus d\'hibiscus frais', price: 1000, image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400&h=300&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 2, calories: 120, categoryId: 'cat-4' },
-        { id: 'p10', name: 'Cocktail Maison', description: 'Mélange de jus tropicaux', price: 2000, image: 'https://images.unsplash.com/photo-1536935338788-846bb9981813?w=400&h=300&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 5, calories: 180, categoryId: 'cat-4' },
+        { id: 'p11-al', name: 'Alloco Croustillant', description: 'Bananes plantains mûres frites à l’huile dorée avec sauce piment tomate.', price: 1200, image: 'https://images.unsplash.com/photo-1600335895229-6e75511892c8?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 8, calories: 280, categoryId: 'cat-4' },
+        { id: 'p12-at', name: 'Attiéké Traditionnel', description: 'Semoule de manioc fine cuite à la vapeur, légèrement acidulée et parfumée.', price: 1000, image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 5, calories: 180, categoryId: 'cat-4' },
+        { id: 'p13-rz', name: 'Riz Parfumé aux Épices', description: 'Riz blanc jasmin délicatement infusé à la cardamome et feuilles de laurier.', price: 800, image: 'https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 5, calories: 200, categoryId: 'cat-4' },
+        { id: 'p14-fr', name: 'Frites Maison Croquantes', description: 'Pommes de terre fraîches coupées à la main, frites deux fois pour un croustillant parfait.', price: 1500, image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 10, calories: 320, categoryId: 'cat-4' },
       ],
     },
     {
       id: 'cat-5',
-      name: 'Desserts',
-      icon: '🍰',
-      description: 'Finitions sucrées',
+      name: 'Boissons & Cocktails',
+      icon: '🍹',
+      description: 'Jus pressés à froid et infusions artisanales',
       products: [
-        { id: 'p11', name: 'Banane Flambée', description: 'Banane caramélisée flambée au rhum', price: 2500, image: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&h=300&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 10, calories: 280, categoryId: 'cat-5' },
-        { id: 'p12', name: 'Moelleux au Chocolat', description: 'Gâteau coulant, glace vanille', price: 3000, image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=400&h=300&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 12, calories: 420, categoryId: 'cat-5' },
+        { id: 'p9', name: 'Jus de Bissap Royal', description: 'Infusion de fleurs d’hibiscus bio, menthe fraîche et une touche de fleur d’oranger.', price: 1000, image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 2, calories: 120, categoryId: 'cat-5' },
+        { id: 'p10', name: 'Cocktail Signature Zagoor', description: 'Nectar de mangue fraîche, ananas victoria, passion et pointe de gingembre.', price: 2000, image: 'https://images.unsplash.com/photo-1536935338788-846bb9981813?w=600&h=450&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 5, calories: 180, categoryId: 'cat-5' },
+        { id: 'p15-gg', name: 'Jus de Gingembre Tonifiant', description: 'Gingembre pressé pur, citron vert pressé et sucre de canne bio.', price: 1000, image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 3, calories: 80, categoryId: 'cat-5' },
+        { id: 'p16-bb', name: 'Nectar de Baobab Crémeux', description: 'Pulpe de pain de singe riche en antioxydants, lait végétal et muscade.', price: 1200, image: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 3, calories: 110, categoryId: 'cat-5' },
+      ],
+    },
+    {
+      id: 'cat-6',
+      name: 'Desserts Gourmands',
+      icon: '🍰',
+      description: 'Douceurs sucrées et créations pâtissières',
+      products: [
+        { id: 'p12', name: 'Moelleux Coulant au Chocolat', description: 'Chocolat noir pure origine au cœur fondant, accompagné de sa boule de glace vanille.', price: 3000, image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=600&h=450&fit=crop', isAvailable: true, isFeatured: true, preparationTime: 12, calories: 420, categoryId: 'cat-6' },
+        { id: 'p11', name: 'Bananes Flambées au Rhum', description: 'Bananes caramélisées au sucre roux, flambées au rhum ambré et zeste de citron vert.', price: 2500, image: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 10, calories: 280, categoryId: 'cat-6' },
+        { id: 'p17-fr', name: 'Carpaccio de Fruits Tropicaux', description: 'Ananas Victoria, mangue, papaye et fruits de la passion avec sirop à la menthe fraîche.', price: 2200, image: 'https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 8, calories: 140, categoryId: 'cat-6' },
+        { id: 'p18-gl', name: 'Glace Artisanale 2 Boules', description: 'Parfums au choix : Vanille Bourbon, Chocolat Intense, Mangue du Bénin, Coco Grillée.', price: 2000, image: 'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?w=600&h=450&fit=crop', isAvailable: true, isFeatured: false, preparationTime: 3, calories: 210, categoryId: 'cat-6' },
       ],
     },
   ],
@@ -249,16 +270,43 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('menu')
+  const [viewLayout, setViewLayout] = useState<'grid' | 'compact'>('grid')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [selectedProductForDetail, setSelectedProductForDetail] = useState<Product | null>(null)
+  const [detailQuantity, setDetailQuantity] = useState(1)
+  const [detailSpiceLevel, setDetailSpiceLevel] = useState<'mild' | 'medium' | 'hot'>('medium')
+  const [detailSpecialNote, setDetailSpecialNote] = useState('')
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '', notes: '' })
   const [orderType, setOrderType] = useState<'dine_in' | 'takeaway' | 'delivery'>('dine_in')
   const [paymentProvider, setPaymentProvider] = useState<PaymentProviderId>('wave')
   const [paymentPhone, setPaymentPhone] = useState('')
   const [countryCode, setCountryCode] = useState('+229')
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'assazara' | 'mobile_money' | 'card'>('mobile_money')
+
+  const openProductDetail = (product: Product) => {
+    setSelectedProductForDetail(product)
+    setDetailQuantity(1)
+    setDetailSpecialNote('')
+    setDetailSpiceLevel('medium')
+  }
+
+  const addDetailProductToCart = () => {
+    if (!selectedProductForDetail) return
+    for (let i = 0; i < detailQuantity; i++) {
+      addItem({
+        id: selectedProductForDetail.id,
+        name: selectedProductForDetail.name,
+        price: selectedProductForDetail.price,
+        quantity: 1,
+        image: selectedProductForDetail.image || undefined,
+      })
+    }
+    toast.success(`${detailQuantity}x ${selectedProductForDetail.name} ajouté au panier`)
+    setSelectedProductForDetail(null)
+  }
   
   // Login state
   const [loginModalOpen, setLoginModalOpen] = useState(false)
@@ -1177,7 +1225,7 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <AnimatePresence mode="wait">
           {viewMode === 'menu' ? (
-            <motion.div key="menu" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="space-y-8">
+            <motion.div key="menu" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="space-y-8 pb-16">
               {/* Demo Mode Notice Banner */}
               {(restaurant?.slug === 'le-jardin-savoureux' || restaurant?.id === 'demo-restaurant') && (
                 <div className="bg-gradient-to-r from-[#FFF7ED] via-white to-[#FFF7ED] border-2 border-[#EA580C]/40 rounded-3xl p-4 sm:p-5 shadow-lg shadow-[#EA580C]/5 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -1210,28 +1258,39 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
 
               {/* Hero Restaurant Banner */}
               {restaurant?.banner && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="relative rounded-[2.5rem] overflow-hidden h-64 sm:h-80 xl:h-96 shadow-2xl border border-[#FDE8CD]">
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="relative rounded-[2.5rem] overflow-hidden h-72 sm:h-88 xl:h-96 shadow-2xl border-2 border-[#FDE8CD]">
                   <Image src={restaurant.banner} alt={restaurant.name} fill sizes="100vw" className="object-cover" priority />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/15" />
                   <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10 text-white space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-extrabold uppercase tracking-wider text-[#EA580C] bg-white/90 px-3 py-1 rounded-full backdrop-blur-md">
-                        Menu Digital Officiel
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-[#EA580C] bg-white px-3 py-1 rounded-full shadow-md">
+                        Menu Digital & Commandes
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-black/60 px-3 py-1 rounded-full backdrop-blur-md border border-white/15">
+                        <Star className="w-3.5 h-3.5 fill-current text-amber-400" /> 4.9/5 (140+ avis)
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-black/60 px-3 py-1 rounded-full backdrop-blur-md border border-white/15">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Ouvert • Service en salle & livraison
                       </span>
                     </div>
-                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight font-heading">{restaurant.name}</h2>
-                    <p className="text-white/90 text-xs sm:text-base max-w-2xl font-medium leading-relaxed">{restaurant.description}</p>
-                    <div className="flex flex-wrap items-center gap-4 pt-2">
+
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight font-heading text-white">{restaurant.name}</h2>
+                    <p className="text-white/90 text-xs sm:text-base max-w-3xl font-medium leading-relaxed">{restaurant.description}</p>
+                    
+                    <div className="flex flex-wrap items-center gap-3 pt-1">
                       {restaurant.address && (
                         <span className="flex items-center gap-1.5 text-white/90 text-xs font-semibold bg-black/40 px-3.5 py-1.5 rounded-full backdrop-blur-md border border-white/10">
                           <MapPin className="w-3.5 h-3.5 text-[#EA580C]" /> {restaurant.address}
                         </span>
                       )}
                       {restaurant.phone && (
-                        <span className="flex items-center gap-1.5 text-white/90 text-xs font-semibold bg-black/40 px-3.5 py-1.5 rounded-full backdrop-blur-md border border-white/10">
+                        <a href={`tel:${restaurant.phone}`} className="flex items-center gap-1.5 text-white/90 hover:text-white text-xs font-semibold bg-black/40 hover:bg-black/60 px-3.5 py-1.5 rounded-full backdrop-blur-md border border-white/10 transition-colors">
                           <Phone className="w-3.5 h-3.5 text-[#EA580C]" /> {restaurant.phone}
-                        </span>
+                        </a>
                       )}
+                      <span className="flex items-center gap-1.5 text-white/90 text-xs font-semibold bg-black/40 px-3.5 py-1.5 rounded-full backdrop-blur-md border border-white/10">
+                        <Clock className="w-3.5 h-3.5 text-[#EA580C]" /> 15 - 25 min de préparation
+                      </span>
                     </div>
                   </div>
                 </motion.div>
@@ -1239,36 +1298,36 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
 
               {/* Dine-in Table & Waiter Service Bar */}
               {restaurant?.serviceType !== 'online' && (
-                <div className="bg-white border-2 border-[#FDE8CD] rounded-2xl p-3 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-[#EA580C]/10 text-[#EA580C] flex items-center justify-center font-extrabold flex-shrink-0">
-                      <UtensilsCrossed className="w-4 h-4" />
+                <div className="bg-white border-2 border-[#FDE8CD] rounded-3xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-2xl bg-[#FFF7ED] border border-[#FDE8CD] text-[#EA580C] flex items-center justify-center font-extrabold flex-shrink-0 shadow-xs">
+                      <UtensilsCrossed className="w-5 h-5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-[#1C1917]">
-                          {tableNumber ? `Vous commandez à la Table ${tableNumber}` : 'Service en Salle & Terrasse'}
+                        <span className="text-sm font-extrabold text-[#1C1917]">
+                          {tableNumber ? `Service en Table : ${tableNumber}` : 'Service en Salle & Terrasse'}
                         </span>
                         {tableNumber && (
-                          <span className="px-2 py-0.5 rounded-full bg-[#EA580C] text-white text-[10px] font-black font-mono">
+                          <span className="px-2.5 py-0.5 rounded-full bg-[#EA580C] text-white text-xs font-black font-mono shadow-xs">
                             {tableNumber}
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-[#78716C]">
+                      <p className="text-xs text-[#78716C] mt-0.5">
                         {tableNumber
-                          ? 'Vos commandes seront servies directement à votre table.'
-                          : 'Scannez le QR Code sur votre table ou sélectionnez votre numéro.'}
+                          ? 'Vos commandes et boissons seront servies directement à votre table.'
+                          : 'Scannez le QR Code de votre chevalet de table ou choisissez votre numéro ci-contre.'}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2.5 flex-wrap">
                     <Select value={tableNumber || ''} onValueChange={setTable}>
-                      <SelectTrigger className="w-36 h-9 bg-[#FFFBF5] border-[#FDE8CD] rounded-xl text-xs font-bold">
+                      <SelectTrigger className="w-40 h-10 bg-[#FFFBF5] border-2 border-[#FDE8CD] rounded-2xl text-xs font-bold text-[#1C1917] focus:ring-[#EA580C]">
                         <SelectValue placeholder="Changer table" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl border-[#FDE8CD]">
+                      <SelectContent className="rounded-2xl border-2 border-[#FDE8CD]">
                         {restaurant?.tables && restaurant.tables.length > 0 ? (
                           restaurant.tables.map((t) => (
                             <SelectItem key={t.id} value={t.number} className="text-xs font-bold">
@@ -1289,123 +1348,197 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
                       onClick={() => setCallWaiterModalOpen(true)}
                       variant="outline"
                       size="sm"
-                      className="h-9 px-3.5 rounded-xl border-[#FDE8CD] bg-[#FFF7ED] text-[#EA580C] hover:bg-[#EA580C] hover:text-white font-extrabold text-xs transition-all gap-1.5 shadow-xs"
+                      className="h-10 px-4 rounded-2xl border-2 border-[#FDE8CD] bg-[#FFF7ED] text-[#EA580C] hover:bg-[#EA580C] hover:text-white font-extrabold text-xs transition-all gap-2 shadow-xs"
                     >
-                      <Bell className="w-3.5 h-3.5" />
+                      <Bell className="w-4 h-4" />
                       <span>Appeler le Serveur</span>
                     </Button>
                   </div>
                 </div>
               )}
 
-              {/* Search & Category Filter Bar */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
-                  <Input 
-                    value={searchQuery} 
-                    onChange={(e) => setSearchQuery(e.target.value)} 
-                    placeholder="Rechercher un plat, une boisson, un dessert..." 
-                    className="pl-11 h-12 bg-white border-[#FDE8CD] focus-visible:ring-[#EA580C] rounded-2xl text-sm" 
-                  />
+              {/* Sticky Search, Category Selector & Layout Switcher */}
+              <div className="sticky top-16 z-30 bg-[#FFFBF5]/95 backdrop-blur-xl pt-2 pb-3 border-b border-[#FDE8CD] space-y-3">
+                <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                  {/* Search Input */}
+                  <div className="relative flex-1 w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
+                    <Input 
+                      value={searchQuery} 
+                      onChange={(e) => setSearchQuery(e.target.value)} 
+                      placeholder="Rechercher un plat, une grillade, une boisson..." 
+                      className="pl-11 pr-10 h-12 bg-white border-2 border-[#FDE8CD] focus-visible:ring-[#EA580C] rounded-2xl text-sm font-medium shadow-xs" 
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#78716C] hover:text-[#1C1917] bg-[#FFF7ED] w-6 h-6 rounded-full flex items-center justify-center"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Layout View Switcher (Grid / Compact List) */}
+                  <div className="flex items-center gap-1.5 bg-white border-2 border-[#FDE8CD] p-1 rounded-2xl shadow-xs self-end sm:self-auto flex-shrink-0">
+                    <button
+                      onClick={() => setViewLayout('grid')}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all",
+                        viewLayout === 'grid'
+                          ? "bg-[#EA580C] text-white shadow-xs"
+                          : "text-[#78716C] hover:text-[#1C1917] hover:bg-[#FFF7ED]"
+                      )}
+                      title="Affichage en Grille Gourmande"
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                      <span className="hidden md:inline">Grille Visuelle</span>
+                    </button>
+                    <button
+                      onClick={() => setViewLayout('compact')}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all",
+                        viewLayout === 'compact'
+                          ? "bg-[#EA580C] text-white shadow-xs"
+                          : "text-[#78716C] hover:text-[#1C1917] hover:bg-[#FFF7ED]"
+                      )}
+                      title="Affichage en Liste Carte Restaurant"
+                    >
+                      <List className="w-3.5 h-3.5" />
+                      <span className="hidden md:inline">Carte Épurée</span>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Horizontal Category Navigation Bar with Badges */}
                 <ScrollArea className="whitespace-nowrap pb-1">
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <Button 
                       onClick={() => setSelectedCategory(null)} 
                       className={cn(
-                        "rounded-2xl text-xs font-bold px-4 py-5 transition-all", 
+                        "rounded-2xl text-xs font-extrabold px-4 py-5 transition-all shadow-xs gap-2", 
                         !selectedCategory 
-                          ? "bg-[#EA580C] hover:bg-[#C2410C] text-white shadow-md shadow-[#EA580C]/20" 
-                          : "bg-white hover:bg-[#FFF7ED] text-[#78716C] border border-[#FDE8CD]"
+                          ? "bg-[#EA580C] hover:bg-[#C2410C] text-white shadow-md shadow-[#EA580C]/20 border-0" 
+                          : "bg-white hover:bg-[#FFF7ED] text-[#78716C] border-2 border-[#FDE8CD]"
                       )}
                     >
-                      Tout le Menu
+                      <span>🍽️ Tout le Menu</span>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-[10px] font-bold font-mono",
+                        !selectedCategory ? "bg-white/20 text-white" : "bg-[#FFF7ED] text-[#EA580C]"
+                      )}>
+                        {allProducts.length}
+                      </span>
                     </Button>
                     {restaurant?.categories.map((cat) => (
                       <Button 
                         key={cat.id} 
                         onClick={() => setSelectedCategory(cat.id)} 
                         className={cn(
-                          "rounded-2xl text-xs font-bold px-4 py-5 transition-all whitespace-nowrap", 
+                          "rounded-2xl text-xs font-extrabold px-4 py-5 transition-all whitespace-nowrap shadow-xs gap-2", 
                           selectedCategory === cat.id 
-                            ? "bg-[#EA580C] hover:bg-[#C2410C] text-white shadow-md shadow-[#EA580C]/20" 
-                            : "bg-white hover:bg-[#FFF7ED] text-[#78716C] border border-[#FDE8CD]"
+                            ? "bg-[#EA580C] hover:bg-[#C2410C] text-white shadow-md shadow-[#EA580C]/20 border-0" 
+                            : "bg-white hover:bg-[#FFF7ED] text-[#78716C] border-2 border-[#FDE8CD]"
                         )}
                       >
-                        <span className="mr-1.5">{cat.icon || '🍽️'}</span>
+                        <span className="text-sm">{cat.icon || '🍽️'}</span>
                         <span>{cat.name}</span>
+                        <span className={cn(
+                          "px-2 py-0.5 rounded-full text-[10px] font-bold font-mono",
+                          selectedCategory === cat.id ? "bg-white/20 text-white" : "bg-[#FFF7ED] text-[#EA580C]"
+                        )}>
+                          {cat.products.length}
+                        </span>
                       </Button>
                     ))}
                   </div>
                 </ScrollArea>
               </div>
 
-              {/* Featured / Popular Products */}
+              {/* 1. Featured / Incontournables - Perfectly Balanced 4-Column Grid */}
               {featuredProducts.length > 0 && !searchQuery && !selectedCategory && (
                 <motion.section initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-[#EA580C]/10 text-[#EA580C] flex items-center justify-center">
-                      <Flame className="w-4 h-4 fill-current" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-[#EA580C] text-white flex items-center justify-center shadow-md shadow-[#EA580C]/30">
+                        <Flame className="w-4 h-4 fill-current" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl sm:text-2xl font-black text-[#1C1917] font-heading">
+                          Suggestions & Incontournables du Chef
+                        </h3>
+                        <p className="text-xs text-[#78716C]">Nos spécialités les plus plébiscitées par nos clients</p>
+                      </div>
                     </div>
-                    <h3 className="text-xl font-extrabold text-[#1C1917] font-heading">Suggestions & Incontournables</h3>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {featuredProducts.map((product) => {
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    {featuredProducts.slice(0, 4).map((product) => {
                       const cartItem = items.find(i => i.id === product.id)
                       const cartQty = cartItem ? cartItem.quantity : 0
                       return (
                         <div
                           key={product.id}
-                          className="group bg-white rounded-3xl overflow-hidden border border-[#FDE8CD] shadow-[0_4px_20px_rgba(28,25,23,0.04)] hover:shadow-[0_16px_36px_rgba(234,88,12,0.12)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between"
+                          className="group bg-white rounded-3xl overflow-hidden border-2 border-[#FDE8CD] shadow-[0_4px_20px_rgba(28,25,23,0.04)] hover:shadow-[0_16px_36px_rgba(234,88,12,0.14)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between"
                         >
-                          <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-[#FFF7ED]">
+                          {/* Card Image Banner */}
+                          <div 
+                            onClick={() => openProductDetail(product)}
+                            className="relative h-48 w-full overflow-hidden bg-[#FFF7ED] cursor-pointer"
+                          >
                             {product.image ? (
                               <Image
                                 src={product.image}
                                 alt={product.name}
                                 fill
-                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                                className="object-cover group-hover:scale-108 transition-transform duration-500"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-[#EA580C]/40">
                                 <UtensilsCrossed className="w-12 h-12" />
                               </div>
                             )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10 pointer-events-none" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10 pointer-events-none" />
                             <div className="absolute top-3 left-3">
-                              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-white bg-[#EA580C] px-2.5 py-1 rounded-full shadow-md">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-white bg-[#EA580C] px-2.5 py-1 rounded-full shadow-md">
                                 <Flame className="w-3 h-3 fill-current" /> Populaire
                               </span>
                             </div>
                             {product.preparationTime && (
-                              <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                              <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
                                 <Clock className="w-3 h-3 text-[#EA580C]" />
                                 <span>{product.preparationTime} min</span>
                               </div>
                             )}
                           </div>
-                          <div className="p-5 flex flex-col flex-1 justify-between gap-4">
-                            <div className="space-y-1.5">
-                              <h4 className="font-extrabold text-[#1C1917] text-base sm:text-lg font-heading leading-snug group-hover:text-[#EA580C] transition-colors">
+
+                          {/* Card Info */}
+                          <div className="p-4 sm:p-5 flex flex-col flex-1 justify-between gap-3.5">
+                            <div 
+                              onClick={() => openProductDetail(product)}
+                              className="space-y-1 cursor-pointer"
+                            >
+                              <h4 className="font-black text-[#1C1917] text-base font-heading leading-snug group-hover:text-[#EA580C] transition-colors">
                                 {product.name}
                               </h4>
                               {product.description && (
-                                <p className="text-xs sm:text-sm text-[#78716C] line-clamp-2 leading-relaxed">
+                                <p className="text-xs text-[#78716C] line-clamp-2 leading-relaxed">
                                   {product.description}
                                 </p>
                               )}
                             </div>
+
                             <div className="pt-3 border-t border-[#FDE8CD] flex items-center justify-between gap-2">
                               <div className="flex flex-col">
                                 <span className="text-[10px] font-bold text-[#78716C] uppercase tracking-wider">Prix</span>
-                                <span className="text-lg sm:text-xl font-black text-[#EA580C] font-mono tracking-tight">
+                                <span className="text-base sm:text-lg font-black text-[#EA580C] font-mono tracking-tight">
                                   {formatCurrency(product.price, restaurant?.currency)}
                                 </span>
                               </div>
+
                               {cartQty > 0 ? (
-                                <div className="flex items-center gap-1.5 bg-[#EA580C] text-white p-1 rounded-2xl shadow-md shadow-[#EA580C]/25">
+                                <div className="flex items-center gap-1 bg-[#EA580C] text-white p-1 rounded-2xl shadow-md shadow-[#EA580C]/25">
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveFromCart(product.id)}
@@ -1428,7 +1561,7 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
                                 <Button
                                   size="sm"
                                   onClick={() => handleAddToCart(product)}
-                                  className="bg-[#FFF7ED] hover:bg-[#EA580C] text-[#EA580C] hover:text-white border border-[#FDE8CD] hover:border-[#EA580C] rounded-2xl font-bold text-xs px-4 py-2 transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] shadow-xs flex items-center gap-1.5"
+                                  className="bg-[#FFF7ED] hover:bg-[#EA580C] text-[#EA580C] hover:text-white border border-[#FDE8CD] hover:border-[#EA580C] rounded-2xl font-extrabold text-xs px-3.5 py-2 transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] shadow-xs flex items-center gap-1.5"
                                 >
                                   <Plus className="w-3.5 h-3.5" />
                                   <span>Commander</span>
@@ -1443,147 +1576,277 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
                 </motion.section>
               )}
 
-              {/* Products by Categories */}
+              {/* 2. Menu Organized by Categories */}
               {!searchQuery && (
-                <div className="space-y-10">
+                <div className="space-y-12">
                   {restaurant?.categories.filter(cat => !selectedCategory || cat.id === selectedCategory).map((category, catIndex) => (
-                    <motion.section key={category.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * catIndex }} className="space-y-4">
-                      <div className="flex items-center gap-3 pb-2 border-b border-[#FDE8CD]">
-                        <span className="text-2xl">{category.icon || '🍽️'}</span>
-                        <div>
-                          <h3 className="text-xl font-extrabold text-[#1C1917] font-heading">{category.name}</h3>
-                          {category.description && <p className="text-xs text-[#78716C]">{category.description}</p>}
+                    <motion.section 
+                      key={category.id} 
+                      initial={{ opacity: 0, y: 15 }} 
+                      animate={{ opacity: 1, y: 0 }} 
+                      transition={{ delay: 0.04 * catIndex }} 
+                      className="space-y-5"
+                    >
+                      {/* Category Header */}
+                      <div className="flex items-center justify-between pb-3 border-b-2 border-[#FDE8CD]">
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl">{category.icon || '🍽️'}</span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-xl sm:text-2xl font-black text-[#1C1917] font-heading">{category.name}</h3>
+                              <span className="px-2.5 py-0.5 rounded-full bg-[#FFF7ED] border border-[#FDE8CD] text-[#EA580C] text-xs font-bold font-mono">
+                                {category.products.length} plat{category.products.length > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            {category.description && (
+                              <p className="text-xs text-[#78716C] mt-0.5">{category.description}</p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {category.products.map((product) => {
-                          const cartItem = items.find(i => i.id === product.id)
-                          const cartQty = cartItem ? cartItem.quantity : 0
-                          return (
-                            <div
-                              key={product.id}
-                              className="group bg-white rounded-3xl overflow-hidden border border-[#FDE8CD] shadow-[0_4px_20px_rgba(28,25,23,0.04)] hover:shadow-[0_16px_36px_rgba(234,88,12,0.12)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between"
-                            >
-                              <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-[#FFF7ED]">
-                                {product.image ? (
-                                  <Image
-                                    src={product.image}
-                                    alt={product.name}
-                                    fill
-                                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-[#EA580C]/40">
-                                    <UtensilsCrossed className="w-12 h-12" />
-                                  </div>
-                                )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10 pointer-events-none" />
-                                {product.isFeatured && (
-                                  <div className="absolute top-3 left-3">
-                                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-white bg-[#EA580C] px-2.5 py-1 rounded-full shadow-md">
-                                      <Flame className="w-3 h-3 fill-current" /> Spécialité
-                                    </span>
-                                  </div>
-                                )}
-                                {product.preparationTime && (
-                                  <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
-                                    <Clock className="w-3 h-3 text-[#EA580C]" />
-                                    <span>{product.preparationTime} min</span>
-                                  </div>
-                                )}
-                              </div>
-                              <div className="p-5 flex flex-col flex-1 justify-between gap-4">
-                                <div className="space-y-1.5">
-                                  <h4 className="font-extrabold text-[#1C1917] text-base sm:text-lg font-heading leading-snug group-hover:text-[#EA580C] transition-colors">
-                                    {product.name}
-                                  </h4>
-                                  {product.description && (
-                                    <p className="text-xs sm:text-sm text-[#78716C] line-clamp-2 leading-relaxed">
-                                      {product.description}
-                                    </p>
+
+                      {/* Display Mode A: Grid Layout */}
+                      {viewLayout === 'grid' ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                          {category.products.map((product) => {
+                            const cartItem = items.find(i => i.id === product.id)
+                            const cartQty = cartItem ? cartItem.quantity : 0
+                            return (
+                              <div
+                                key={product.id}
+                                className="group bg-white rounded-3xl overflow-hidden border-2 border-[#FDE8CD] shadow-[0_4px_20px_rgba(28,25,23,0.04)] hover:shadow-[0_16px_36px_rgba(234,88,12,0.12)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between"
+                              >
+                                <div 
+                                  onClick={() => openProductDetail(product)}
+                                  className="relative h-44 sm:h-48 w-full overflow-hidden bg-[#FFF7ED] cursor-pointer"
+                                >
+                                  {product.image ? (
+                                    <Image
+                                      src={product.image}
+                                      alt={product.name}
+                                      fill
+                                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                                      className="object-cover group-hover:scale-108 transition-transform duration-500"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[#EA580C]/40">
+                                      <UtensilsCrossed className="w-12 h-12" />
+                                    </div>
+                                  )}
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/10 pointer-events-none" />
+                                  {product.isFeatured && (
+                                    <div className="absolute top-3 left-3">
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-white bg-[#EA580C] px-2.5 py-1 rounded-full shadow-md">
+                                        <Flame className="w-3 h-3 fill-current" /> Spécialité
+                                      </span>
+                                    </div>
+                                  )}
+                                  {product.preparationTime && (
+                                    <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                                      <Clock className="w-3 h-3 text-[#EA580C]" />
+                                      <span>{product.preparationTime} min</span>
+                                    </div>
                                   )}
                                 </div>
-                                <div className="pt-3 border-t border-[#FDE8CD] flex items-center justify-between gap-2">
-                                  <div className="flex flex-col">
-                                    <span className="text-[10px] font-bold text-[#78716C] uppercase tracking-wider">Prix</span>
-                                    <span className="text-lg sm:text-xl font-black text-[#EA580C] font-mono tracking-tight">
-                                      {formatCurrency(product.price, restaurant?.currency)}
-                                    </span>
+                                <div className="p-4 sm:p-5 flex flex-col flex-1 justify-between gap-3.5">
+                                  <div 
+                                    onClick={() => openProductDetail(product)}
+                                    className="space-y-1 cursor-pointer"
+                                  >
+                                    <h4 className="font-extrabold text-[#1C1917] text-base font-heading leading-snug group-hover:text-[#EA580C] transition-colors">
+                                      {product.name}
+                                    </h4>
+                                    {product.description && (
+                                      <p className="text-xs text-[#78716C] line-clamp-2 leading-relaxed">
+                                        {product.description}
+                                      </p>
+                                    )}
                                   </div>
+                                  <div className="pt-3 border-t border-[#FDE8CD] flex items-center justify-between gap-2">
+                                    <div className="flex flex-col">
+                                      <span className="text-[10px] font-bold text-[#78716C] uppercase tracking-wider">Prix</span>
+                                      <span className="text-base sm:text-lg font-black text-[#EA580C] font-mono tracking-tight">
+                                        {formatCurrency(product.price, restaurant?.currency)}
+                                      </span>
+                                    </div>
+                                    {cartQty > 0 ? (
+                                      <div className="flex items-center gap-1 bg-[#EA580C] text-white p-1 rounded-2xl shadow-md shadow-[#EA580C]/25">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemoveFromCart(product.id)}
+                                          className="w-7 h-7 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors active:scale-90"
+                                          aria-label="Diminuer"
+                                        >
+                                          <Minus className="w-3.5 h-3.5" />
+                                        </button>
+                                        <span className="font-bold text-xs px-1.5 font-mono">{cartQty}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAddToCart(product)}
+                                          className="w-7 h-7 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors active:scale-90"
+                                          aria-label="Augmenter"
+                                        >
+                                          <Plus className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleAddToCart(product)}
+                                        className="bg-[#FFF7ED] hover:bg-[#EA580C] text-[#EA580C] hover:text-white border border-[#FDE8CD] hover:border-[#EA580C] rounded-2xl font-extrabold text-xs px-3.5 py-2 transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] shadow-xs flex items-center gap-1.5"
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Commander</span>
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        /* Display Mode B: Compact List Menu Layout */
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {category.products.map((product) => {
+                            const cartItem = items.find(i => i.id === product.id)
+                            const cartQty = cartItem ? cartItem.quantity : 0
+                            return (
+                              <div
+                                key={product.id}
+                                className="group bg-white rounded-3xl p-3 sm:p-4 border-2 border-[#FDE8CD] shadow-xs hover:shadow-lg hover:border-[#EA580C]/50 transition-all flex items-center justify-between gap-4"
+                              >
+                                <div 
+                                  onClick={() => openProductDetail(product)}
+                                  className="flex items-center gap-3.5 flex-1 min-w-0 cursor-pointer"
+                                >
+                                  <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-[#FFF7ED] flex-shrink-0 border border-[#FDE8CD]">
+                                    {product.image ? (
+                                      <Image src={product.image} alt={product.name} fill sizes="100px" className="object-cover group-hover:scale-108 transition-transform duration-300" />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-[#EA580C]/40">
+                                        <UtensilsCrossed className="w-8 h-8" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="space-y-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-extrabold text-[#1C1917] text-sm sm:text-base font-heading truncate group-hover:text-[#EA580C] transition-colors">
+                                        {product.name}
+                                      </h4>
+                                      {product.isFeatured && (
+                                        <span className="text-[9px] font-black uppercase text-[#EA580C] bg-[#FFF7ED] border border-[#FDE8CD] px-2 py-0.2 rounded-full">
+                                          ★ Chef
+                                        </span>
+                                      )}
+                                    </div>
+                                    {product.description && (
+                                      <p className="text-xs text-[#78716C] line-clamp-2 leading-relaxed">
+                                        {product.description}
+                                      </p>
+                                    )}
+                                    <div className="flex items-center gap-2 text-[11px] text-[#78716C] pt-0.5">
+                                      {product.preparationTime && (
+                                        <span className="flex items-center gap-1 font-medium">
+                                          <Clock className="w-3 h-3 text-[#EA580C]" /> {product.preparationTime} min
+                                        </span>
+                                      )}
+                                      {product.calories && (
+                                        <span>• {product.calories} kcal</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                                  <span className="text-base sm:text-lg font-black text-[#EA580C] font-mono">
+                                    {formatCurrency(product.price, restaurant?.currency)}
+                                  </span>
                                   {cartQty > 0 ? (
-                                    <div className="flex items-center gap-1.5 bg-[#EA580C] text-white p-1 rounded-2xl shadow-md shadow-[#EA580C]/25">
+                                    <div className="flex items-center gap-1 bg-[#EA580C] text-white p-1 rounded-2xl shadow-xs">
                                       <button
                                         type="button"
                                         onClick={() => handleRemoveFromCart(product.id)}
-                                        className="w-7 h-7 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors active:scale-90"
+                                        className="w-6 h-6 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors active:scale-90"
                                         aria-label="Diminuer"
                                       >
-                                        <Minus className="w-3.5 h-3.5" />
+                                        <Minus className="w-3 h-3" />
                                       </button>
-                                      <span className="font-bold text-xs px-1.5 font-mono">{cartQty}</span>
+                                      <span className="font-bold text-xs px-1 font-mono">{cartQty}</span>
                                       <button
                                         type="button"
                                         onClick={() => handleAddToCart(product)}
-                                        className="w-7 h-7 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors active:scale-90"
+                                        className="w-6 h-6 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors active:scale-90"
                                         aria-label="Augmenter"
                                       >
-                                        <Plus className="w-3.5 h-3.5" />
+                                        <Plus className="w-3 h-3" />
                                       </button>
                                     </div>
                                   ) : (
                                     <Button
                                       size="sm"
                                       onClick={() => handleAddToCart(product)}
-                                      className="bg-[#FFF7ED] hover:bg-[#EA580C] text-[#EA580C] hover:text-white border border-[#FDE8CD] hover:border-[#EA580C] rounded-2xl font-bold text-xs px-4 py-2 transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] shadow-xs flex items-center gap-1.5"
+                                      className="bg-[#FFF7ED] hover:bg-[#EA580C] text-[#EA580C] hover:text-white border border-[#FDE8CD] rounded-xl font-bold text-xs px-3 h-8 shadow-xs"
                                     >
-                                      <Plus className="w-3.5 h-3.5" />
-                                      <span>Commander</span>
+                                      <Plus className="w-3 h-3 mr-1" />
+                                      Ajouter
                                     </Button>
                                   )}
                                 </div>
                               </div>
-                            </div>
-                          )
-                        })}
-                      </div>
+                            )
+                          })}
+                        </div>
+                      )}
                     </motion.section>
                   ))}
                 </div>
               )}
 
-              {/* Search Results */}
+              {/* Search Results Display */}
               {searchQuery && (
-                <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                  <h3 className="text-base font-bold text-[#1C1917]">
-                    {filteredProducts.length} résultat(s) pour &quot;{searchQuery}&quot;
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#FDE8CD]">
+                    <h3 className="text-lg font-black text-[#1C1917] font-heading">
+                      {filteredProducts.length} résultat{filteredProducts.length > 1 ? 's' : ''} pour &quot;{searchQuery}&quot;
+                    </h3>
+                    <Button variant="ghost" size="sm" onClick={() => setSearchQuery('')} className="text-xs text-[#EA580C] font-bold">
+                      Effacer recherche
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                     {filteredProducts.map((product) => {
                       const cartItem = items.find(i => i.id === product.id)
                       const cartQty = cartItem ? cartItem.quantity : 0
                       return (
                         <div
                           key={product.id}
-                          className="group bg-white rounded-3xl overflow-hidden border border-[#FDE8CD] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                          className="group bg-white rounded-3xl overflow-hidden border-2 border-[#FDE8CD] shadow-xs hover:shadow-lg transition-all flex flex-col justify-between"
                         >
-                          <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-[#FFF7ED]">
+                          <div 
+                            onClick={() => openProductDetail(product)}
+                            className="relative h-44 w-full overflow-hidden bg-[#FFF7ED] cursor-pointer"
+                          >
                             {product.image ? (
-                              <Image src={product.image} alt={product.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                              <Image src={product.image} alt={product.name} fill sizes="(max-width: 768px) 100vw, 25vw" className="object-cover group-hover:scale-108 transition-transform duration-300" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-[#EA580C]/40">
-                                <UtensilsCrossed className="w-12 h-12" />
+                                <UtensilsCrossed className="w-10 h-10" />
                               </div>
                             )}
                           </div>
-                          <div className="p-5 flex flex-col flex-1 justify-between gap-4">
-                            <div>
+                          <div className="p-4 flex flex-col flex-1 justify-between gap-3">
+                            <div 
+                              onClick={() => openProductDetail(product)}
+                              className="cursor-pointer space-y-1"
+                            >
                               <h4 className="font-extrabold text-[#1C1917] text-base font-heading">{product.name}</h4>
-                              <p className="text-xs text-[#78716C] line-clamp-2 mt-1">{product.description}</p>
+                              <p className="text-xs text-[#78716C] line-clamp-2">{product.description}</p>
                             </div>
-                            <div className="pt-3 border-t border-[#FDE8CD] flex items-center justify-between">
-                              <span className="font-black text-[#EA580C] text-lg font-mono">{formatCurrency(product.price, restaurant?.currency)}</span>
-                              <Button size="sm" onClick={() => handleAddToCart(product)} className="bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-2xl font-bold text-xs px-4">
+                            <div className="pt-2 border-t border-[#FDE8CD] flex items-center justify-between">
+                              <span className="font-black text-[#EA580C] text-base font-mono">{formatCurrency(product.price, restaurant?.currency)}</span>
+                              <Button size="sm" onClick={() => handleAddToCart(product)} className="bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-xl font-bold text-xs px-3">
                                 <Plus className="w-3.5 h-3.5 mr-1" /> Commander
                               </Button>
                             </div>
@@ -1593,6 +1856,42 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
                     })}
                   </div>
                 </motion.section>
+              )}
+
+              {/* Floating Bottom Cart Bar (Appears when cart has items) */}
+              {getItemCount() > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 30, scale: 0.95 }}
+                  className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg px-4"
+                >
+                  <div 
+                    onClick={() => setCartOpen(true)}
+                    className="bg-[#1C1917]/95 hover:bg-[#1C1917] text-white backdrop-blur-2xl border-2 border-[#EA580C]/40 rounded-full p-3 sm:p-3.5 shadow-2xl shadow-[#EA580C]/25 flex items-center justify-between gap-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                    <div className="flex items-center gap-3 pl-2">
+                      <div className="w-10 h-10 rounded-full bg-[#EA580C] text-white flex items-center justify-center font-bold text-sm shadow-md">
+                        <ShoppingCart className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white/90">
+                            {getItemCount()} article{getItemCount() > 1 ? 's' : ''} sélectionné{getItemCount() > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <p className="text-base sm:text-lg font-black font-mono text-[#EA580C]">
+                          {formatCurrency(getTotal(), restaurant?.currency)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-[#EA580C] hover:bg-[#C2410C] text-white px-5 py-2.5 rounded-full font-extrabold text-xs sm:text-sm shadow-md transition-colors">
+                      <span>Voir la commande</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </div>
+                  </div>
+                </motion.div>
               )}
             </motion.div>
           ) : viewMode === 'tracking' ? (
@@ -3672,6 +3971,149 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
               Fermer
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Interactive Dish Detail Modal */}
+      <Dialog 
+        open={Boolean(selectedProductForDetail)} 
+        onOpenChange={(open) => !open && setSelectedProductForDetail(null)}
+      >
+        <DialogContent className="max-w-lg bg-white border-2 border-[#FDE8CD] rounded-3xl p-0 overflow-hidden shadow-2xl">
+          {selectedProductForDetail && (
+            <div className="flex flex-col">
+              {/* Photo Banner */}
+              <div className="relative h-60 w-full bg-[#FFF7ED]">
+                {selectedProductForDetail.image ? (
+                  <Image
+                    src={selectedProductForDetail.image}
+                    alt={selectedProductForDetail.name}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 500px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[#EA580C]/40">
+                    <UtensilsCrossed className="w-16 h-16" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                
+                {/* Close Button */}
+                <button
+                  onClick={() => setSelectedProductForDetail(null)}
+                  className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black flex items-center justify-center transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="absolute bottom-4 left-5 right-5 text-white">
+                  <div className="flex items-center gap-2 mb-1">
+                    {selectedProductForDetail.isFeatured && (
+                      <span className="text-[10px] font-black uppercase text-white bg-[#EA580C] px-2.5 py-0.5 rounded-full shadow-xs">
+                        ★ Spécialité Chef
+                      </span>
+                    )}
+                    {selectedProductForDetail.preparationTime && (
+                      <span className="text-[10px] font-bold text-white bg-black/50 backdrop-blur-md px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-[#EA580C]" /> {selectedProductForDetail.preparationTime} min
+                      </span>
+                    )}
+                    {selectedProductForDetail.calories && (
+                      <span className="text-[10px] font-bold text-white/80 bg-black/50 backdrop-blur-md px-2.5 py-0.5 rounded-full">
+                        {selectedProductForDetail.calories} kcal
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-2xl font-black text-white font-heading leading-tight">
+                    {selectedProductForDetail.name}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-5">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#78716C] uppercase tracking-wider">Description & Ingrédients</span>
+                    <span className="text-xl font-black text-[#EA580C] font-mono">
+                      {formatCurrency(selectedProductForDetail.price, restaurant?.currency)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-[#1C1917] leading-relaxed">
+                    {selectedProductForDetail.description || 'Plat d’exception préparé avec passion par notre brigade.'}
+                  </p>
+                </div>
+
+                {/* Spice Level Selector */}
+                <div className="space-y-2 pt-2 border-t border-[#FDE8CD]">
+                  <Label className="text-xs font-extrabold text-[#1C1917]">Niveau de Piment / Assaisonnement</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'mild', label: 'Doux', icon: '🟢', desc: 'Sans piment' },
+                      { id: 'medium', label: 'Moyen 🌶️', icon: '🟡', desc: 'Léger piquant' },
+                      { id: 'hot', label: 'Épicé 🔥', icon: '🔴', desc: 'Bien pimenté' },
+                    ].map((lvl) => (
+                      <button
+                        key={lvl.id}
+                        type="button"
+                        onClick={() => setDetailSpiceLevel(lvl.id as any)}
+                        className={cn(
+                          "p-2.5 rounded-2xl border-2 text-center transition-all",
+                          detailSpiceLevel === lvl.id
+                            ? "bg-[#FFF7ED] border-[#EA580C] text-[#EA580C] font-bold shadow-xs"
+                            : "bg-[#FFFBF5] border-[#FDE8CD] text-[#78716C] hover:border-[#EA580C]/40"
+                        )}
+                      >
+                        <div className="text-xs font-extrabold">{lvl.label}</div>
+                        <div className="text-[10px] text-[#78716C]">{lvl.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Special instructions */}
+                <div className="space-y-1.5 pt-2 border-t border-[#FDE8CD]">
+                  <Label className="text-xs font-extrabold text-[#1C1917]">Instructions spéciales pour la cuisine (optionnel)</Label>
+                  <Input
+                    value={detailSpecialNote}
+                    onChange={(e) => setDetailSpecialNote(e.target.value)}
+                    placeholder="Ex: Sans oignon, sauce à part, bien cuit..."
+                    className="h-10 bg-[#FFFBF5] border-2 border-[#FDE8CD] rounded-xl text-xs"
+                  />
+                </div>
+
+                {/* Stepper and Add Button */}
+                <div className="pt-3 border-t border-[#FDE8CD] flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-[#FFF7ED] border-2 border-[#FDE8CD] p-1 rounded-2xl">
+                    <button
+                      type="button"
+                      onClick={() => setDetailQuantity(Math.max(1, detailQuantity - 1))}
+                      className="w-8 h-8 rounded-xl bg-white text-[#1C1917] hover:bg-[#EA580C] hover:text-white flex items-center justify-center font-bold transition-colors shadow-xs"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <span className="w-8 text-center font-black text-sm font-mono text-[#1C1917]">{detailQuantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => setDetailQuantity(detailQuantity + 1)}
+                      className="w-8 h-8 rounded-xl bg-[#EA580C] text-white hover:bg-[#C2410C] flex items-center justify-center font-bold transition-colors shadow-xs"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <Button
+                    onClick={addDetailProductToCart}
+                    className="flex-1 h-12 bg-[#EA580C] hover:bg-[#C2410C] text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-[#EA580C]/25 transition-all hover:scale-[1.01]"
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    Ajouter ({formatCurrency(selectedProductForDetail.price * detailQuantity, restaurant?.currency)})
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

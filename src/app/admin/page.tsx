@@ -867,10 +867,10 @@ export default function AdminPage() {
           </Card>
         </div>
 
-        {/* 5 Main Tabs Navigation */}
+        {/* 5 Main Tabs Navigation - Centered */}
         <Tabs value={dashboardTab} onValueChange={setDashboardTab} className="space-y-6">
-          <div className="flex items-center justify-between overflow-x-auto pb-1">
-            <TabsList className="bg-white/90 backdrop-blur-md border-2 border-[#FDE8CD] p-1.5 rounded-2xl shadow-xs inline-flex h-auto gap-1">
+          <div className="flex items-center justify-center overflow-x-auto pb-1 w-full">
+            <TabsList className="bg-white/95 backdrop-blur-md border-2 border-[#FDE8CD] p-1.5 rounded-2xl shadow-sm inline-flex h-auto gap-1.5 mx-auto">
               <TabsTrigger
                 value="orders"
                 className="gap-2 px-4 py-2.5 rounded-xl text-xs font-bold data-[state=active]:bg-[#EA580C] data-[state=active]:text-white transition-all shadow-none"
