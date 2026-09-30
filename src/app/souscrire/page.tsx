@@ -842,42 +842,44 @@ export default function SouscrirePage() {
               </div>
 
               <div className="space-y-3">
-                <div className="p-3.5 rounded-2xl bg-[#FFFBF5] border border-[#FDE8CD] flex items-center justify-between gap-3">
+                <div className="p-3.5 rounded-2xl bg-[#FFFBF5] border border-[#FDE8CD] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <span className="text-[11px] text-[#78716C] block">Lien public de votre menu digital :</span>
                     <span className="font-bold text-sm text-[#EA580C] font-mono">
-                      localhost:3000/{createdSlug || 'mon-restaurant'}
+                      {typeof window !== 'undefined' ? `${window.location.host}/${createdSlug || 'mon-restaurant'}` : `/${createdSlug || 'mon-restaurant'}`}
                     </span>
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      navigator.clipboard.writeText(`http://localhost:3000/${createdSlug}`)
+                      const fullUrl = `${window.location.origin}/${createdSlug}`
+                      navigator.clipboard.writeText(fullUrl)
                       toast.success('Lien copié dans le presse-papier !')
                     }}
                     className="border-[#FDE8CD] rounded-xl text-xs font-bold"
                   >
-                    Copier
+                    Copier le lien
                   </Button>
                 </div>
               </div>
 
               {/* Direct Access Buttons */}
-              <div className="pt-2 flex flex-col sm:flex-row gap-3">
+              <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Link
                   href={`/${createdSlug || 'le-jardin-savoureux'}`}
-                  className="flex-1 inline-flex items-center justify-center py-4 px-6 rounded-2xl bg-[#EA580C] hover:bg-[#C2410C] text-white font-extrabold text-sm shadow-lg shadow-[#EA580C]/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="inline-flex items-center justify-center py-3.5 px-5 rounded-2xl bg-[#EA580C] hover:bg-[#C2410C] text-white font-extrabold text-xs shadow-md shadow-[#EA580C]/20 transition-all hover:scale-[1.02]"
                 >
-                  <UtensilsCrossed className="w-4 h-4 mr-2" />
-                  <span>Ouvrir mon Restaurant & Gérer</span>
+                  <UtensilsCrossed className="w-4 h-4 mr-1.5" />
+                  <span>Voir mon Menu Digital Client</span>
                 </Link>
 
                 <Link
-                  href="/"
-                  className="inline-flex items-center justify-center py-4 px-6 rounded-2xl border border-[#FDE8CD] bg-white hover:bg-[#FFF7ED] text-[#78716C] font-bold text-sm"
+                  href={`/admin?restaurant=${createdSlug || 'le-jardin-savoureux'}`}
+                  className="inline-flex items-center justify-center py-3.5 px-5 rounded-2xl bg-[#1C1917] hover:bg-[#292524] text-white font-extrabold text-xs shadow-md transition-all hover:scale-[1.02]"
                 >
-                  Retour Accueil
+                  <Store className="w-4 h-4 mr-1.5 text-[#EA580C]" />
+                  <span>Accéder à mon Cockpit Gérant</span>
                 </Link>
               </div>
 
