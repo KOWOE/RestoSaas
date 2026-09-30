@@ -75,6 +75,8 @@ interface Restaurant {
   taxRate: number
   serviceType?: string | null // 'physical' | 'online' | 'both'
   orderModes?: string | null  // 'dine_in,takeaway,delivery'
+  isActive?: boolean
+  plan?: string
   categories: Category[]
   tables: { id: string; number: string }[]
 }
@@ -1096,6 +1098,44 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
             >
               <Sparkles className="w-4 h-4" />
               <span>Tester la Démo Interactive</span>
+            </Link>
+            <Link
+              href="/"
+              className="text-xs font-semibold text-[#78716C] hover:text-[#1C1917] transition-colors pt-2"
+            >
+              ← Retour à l&apos;accueil Zagoor
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (restaurant && restaurant.isActive === false) {
+    return (
+      <div className="min-h-screen bg-[#FFFBF5] flex items-center justify-center p-4 relative overflow-hidden bg-noise text-center">
+        <div className="max-w-md w-full bg-white border-2 border-red-200 rounded-3xl p-8 shadow-2xl space-y-6 relative z-10">
+          <div className="w-20 h-20 bg-red-50 border-2 border-red-200 rounded-3xl flex items-center justify-center mx-auto shadow-md text-red-500">
+            <AlertCircle className="w-10 h-10" />
+          </div>
+          <div className="space-y-2">
+            <span className="text-xs font-black uppercase tracking-wider text-red-600 bg-red-50 border border-red-200 px-3 py-1 rounded-full inline-block">
+              Établissement Suspendu
+            </span>
+            <h1 className="text-2xl font-extrabold text-[#1C1917] tracking-tight font-heading">
+              {restaurant.name}
+            </h1>
+            <p className="text-sm text-[#78716C] leading-relaxed">
+              Cet établissement a été temporairement suspendu par la direction du SaaS. La consultation de la carte et les commandes sont momentanément désactivées.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 pt-2">
+            <Link
+              href="/le-jardin-savoureux"
+              className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-[#EA580C] hover:bg-[#C2410C] text-white font-bold text-sm shadow-md transition-all"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Voir le Restaurant Démo Actif</span>
             </Link>
             <Link
               href="/"

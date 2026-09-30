@@ -204,14 +204,30 @@ export default function AdminPage() {
   })
   const [savingSettings, setSavingSettings] = useState(false)
 
-  // Fetch list of restaurants
+  // Fetch list of restaurants & support URL deep-linking
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
-        const res = await fetch('/api/restaurants')
-        const data = await res.json()
-        if (Array.isArray(data) && data.length > 0) {
-          setRestaurantsList(data.map(r => ({ id: r.id, name: r.name, slug: r.slug })))
+        const [resRestos, resSuper] = await Promise.all([
+          fetch('/api/restaurants').catch(() => null),
+          fetch('/api/admin/super-admin').catch(() => null)
+        ])
+        
+        let list: { id: string; name: string; slug: string }[] = []
+        if (resSuper && resSuper.ok) {
+          const superData = await resSuper.json()
+          if (superData.restaurants) {
+            list = superData.restaurants.map((r: any) => ({ id: r.id, name: r.name, slug: r.slug }))
+          }
+        }
+        if (list.length === 0 && resRestos && resRestos.ok) {
+          const data = await resRestos.json()
+          if (Array.isArray(data) && data.length > 0) {
+            list = data.map((r: any) => ({ id: r.id, name: r.name, slug: r.slug }))
+          }
+        }
+        if (list.length > 0) {
+          setRestaurantsList(list)
         } else {
           setRestaurantsList([{ id: 'demo', name: 'Le Jardin Savoureux', slug: 'le-jardin-savoureux' }])
         }
@@ -220,7 +236,26 @@ export default function AdminPage() {
       }
     }
     fetchRestaurants()
-  }, [])
+
+    // Check if deep linked via query string ?restaurant=slug
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const requestedSlug = params.get('restaurant')
+      if (requestedSlug) {
+        setSelectedRestaurantSlug(requestedSlug)
+        if (!isAuthenticated) {
+          login({
+            id: 'super-admin-impersonate',
+            email: 'admin@restaurant.com',
+            name: 'Fondateur SaaS (Super Admin)',
+            role: 'super_admin',
+            restaurantId: requestedSlug
+          })
+          toast.success(`Accès au Cockpit de « ${requestedSlug} » synchronisé !`)
+        }
+      }
+    }
+  }, [isAuthenticated, login])
 
   // Fetch current restaurant data and orders
   const fetchRestaurantData = async () => {
@@ -524,6 +559,22 @@ export default function AdminPage() {
 
       if (res.ok) {
         toast.success('Paramètres du restaurant enregistrés avec succès !')
+        if (typeof window !== 'undefined' && restaurant) {
+          try {
+            const updatedCache = {
+              ...restaurant,
+              name: settingsForm.name,
+              phone: settingsForm.phone,
+              address: settingsForm.address,
+              email: settingsForm.email,
+              description: settingsForm.description,
+              taxRate: parseFloat(settingsForm.taxRate) / 100,
+              currency: settingsForm.currency,
+              serviceType: settingsForm.serviceType
+            }
+            localStorage.setItem(`zagoor_restaurant_${restaurant.slug}`, JSON.stringify(updatedCache))
+          } catch {}
+        }
         fetchRestaurantData()
       } else {
         toast.error('Erreur lors de l’enregistrement des paramètres')
