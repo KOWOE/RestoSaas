@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
             orderBy: { sortOrder: 'asc' },
             include: {
               products: {
-                where: { isAvailable: true },
                 orderBy: { sortOrder: 'asc' },
               },
             },

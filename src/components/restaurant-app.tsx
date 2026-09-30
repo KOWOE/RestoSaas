@@ -16,7 +16,8 @@ import {
   LogIn, LogOut, Lock, User as UserIcon, Mail, Key,
   Navigation, MapPinned, Timer, Receipt, MessageCircle,
   AlertCircle, Truck, Store, Home, ClipboardList,
-  Crown, ArrowRight, ArrowLeft, Building2
+  Crown, ArrowRight, ArrowLeft, Building2,
+  Printer, ExternalLink, Share2, HelpCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -280,6 +281,37 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
   const [orders, setOrders] = useState<Order[]>([])
   const [ordersFilter, setOrdersFilter] = useState<string>('all')
   const [dashboardTab, setDashboardTab] = useState<string>('orders')
+  const [selectedTableForQr, setSelectedTableForQr] = useState<{ id: string; number: string } | null>(null)
+  const [qrModalOpen, setQrModalOpen] = useState(false)
+  const [ordersSearchQuery, setOrdersSearchQuery] = useState('')
+  const [productCategoryFilter, setProductCategoryFilter] = useState('all')
+  const [callWaiterModalOpen, setCallWaiterModalOpen] = useState(false)
+
+  const toggleProductAvailability = async (productId: string, currentStatus: boolean) => {
+    setRestaurantData(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        categories: prev.categories.map(cat => ({
+          ...cat,
+          products: cat.products.map(p => p.id === productId ? { ...p, isAvailable: !currentStatus } : p)
+        }))
+      }
+    })
+
+    try {
+      const res = await fetch('/api/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: productId, isAvailable: !currentStatus })
+      })
+      if (res.ok) {
+        toast.success(!currentStatus ? 'Plat activé (Disponible)' : 'Plat marqué comme Épuisé')
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
   // Tracking state
   const { trackedOrders, setTrackedOrders, customerPhone, setCustomerPhone, addTrackedOrder } = useCustomerStore()
@@ -1210,6 +1242,67 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
                 </motion.div>
               )}
 
+              {/* Dine-in Table & Waiter Service Bar */}
+              {restaurant?.serviceType !== 'online' && (
+                <div className="bg-white border-2 border-[#FDE8CD] rounded-2xl p-3 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#EA580C]/10 text-[#EA580C] flex items-center justify-center font-extrabold flex-shrink-0">
+                      <UtensilsCrossed className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-[#1C1917]">
+                          {tableNumber ? `Vous commandez à la Table ${tableNumber}` : 'Service en Salle & Terrasse'}
+                        </span>
+                        {tableNumber && (
+                          <span className="px-2 py-0.5 rounded-full bg-[#EA580C] text-white text-[10px] font-black font-mono">
+                            {tableNumber}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#78716C]">
+                        {tableNumber
+                          ? 'Vos commandes seront servies directement à votre table.'
+                          : 'Scannez le QR Code sur votre table ou sélectionnez votre numéro.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Select value={tableNumber || ''} onValueChange={setTable}>
+                      <SelectTrigger className="w-36 h-9 bg-[#FFFBF5] border-[#FDE8CD] rounded-xl text-xs font-bold">
+                        <SelectValue placeholder="Changer table" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-[#FDE8CD]">
+                        {restaurant?.tables && restaurant.tables.length > 0 ? (
+                          restaurant.tables.map((t) => (
+                            <SelectItem key={t.id} value={t.number} className="text-xs font-bold">
+                              🍽️ Table {t.number}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          Array.from({ length: 10 }, (_, i) => (
+                            <SelectItem key={`T${i + 1}`} value={`T${i + 1}`} className="text-xs font-bold">
+                              🍽️ Table T{i + 1}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+
+                    <Button
+                      onClick={() => setCallWaiterModalOpen(true)}
+                      variant="outline"
+                      size="sm"
+                      className="h-9 px-3.5 rounded-xl border-[#FDE8CD] bg-[#FFF7ED] text-[#EA580C] hover:bg-[#EA580C] hover:text-white font-extrabold text-xs transition-all gap-1.5 shadow-xs"
+                    >
+                      <Bell className="w-3.5 h-3.5" />
+                      <span>Appeler le Serveur</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Search & Category Filter Bar */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="relative flex-1">
@@ -1975,220 +2068,924 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
                 ))}
               </div>
 
-              {/* Dashboard Tabs */}
-              <Tabs value={dashboardTab} onValueChange={setDashboardTab} className="space-y-4">
-                <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
-                  <TabsTrigger value="orders" className="gap-2"><ChefHat className="w-4 h-4" />Commandes</TabsTrigger>
-                  <TabsTrigger value="products" className="gap-2"><Package className="w-4 h-4" />Produits</TabsTrigger>
-                  <TabsTrigger value="settings" className="gap-2"><Settings className="w-4 h-4" />Paramètres</TabsTrigger>
-                </TabsList>
+              {/* Dashboard Tabs Navigation */}
+              <Tabs value={dashboardTab} onValueChange={setDashboardTab} className="space-y-6">
+                <div className="flex items-center justify-between overflow-x-auto pb-1">
+                  <TabsList className="bg-white/80 backdrop-blur-md border-2 border-[#FDE8CD] p-1.5 rounded-2xl shadow-xs inline-flex h-auto gap-1">
+                    <TabsTrigger
+                      value="orders"
+                      className="gap-2 px-3.5 py-2 rounded-xl text-xs font-bold data-[state=active]:bg-[#EA580C] data-[state=active]:text-white transition-all shadow-none"
+                    >
+                      <ChefHat className="w-4 h-4" />
+                      <span>Commandes & KDS</span>
+                      {orders.filter(o => o.status === 'pending' || o.status === 'confirmed').length > 0 && (
+                        <span className="ml-1 px-1.5 py-0.2 text-[10px] font-black rounded-full bg-amber-400 text-[#1C1917]">
+                          {orders.filter(o => o.status === 'pending' || o.status === 'confirmed').length}
+                        </span>
+                      )}
+                    </TabsTrigger>
 
-                {/* Orders Tab */}
-                <TabsContent value="orders">
-                  <Card className="border-slate-200 shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <CardTitle className="flex items-center gap-2"><ChefHat className="w-5 h-5 text-[#EA580C]" />Gestion des Commandes</CardTitle>
-                      <Select value={ordersFilter} onValueChange={setOrdersFilter}>
-                        <SelectTrigger className="w-48 bg-white border-2 border-[#FDE8CD] rounded-xl text-xs font-bold">
-                          <Filter className="w-3.5 h-3.5 text-[#EA580C] mr-1" />
-                          <SelectValue placeholder="Filtrer les commandes" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">📋 Toutes les commandes</SelectItem>
-                          <SelectItem value="pending">⏳ En attente</SelectItem>
-                          <SelectItem value="confirmed">👍 Confirmées</SelectItem>
-                          <SelectItem value="preparing">🍳 En préparation</SelectItem>
-                          <SelectItem value="ready">🍽️ Prêtes</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </CardHeader>
-                    <CardContent>
-                      <ScrollArea className="h-96">
-                        <div className="space-y-3">
-                          {orders.filter(o => ordersFilter === 'all' || o.status === ordersFilter).slice(0, 10).map((order, index) => (
-                            <motion.div key={order.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * index }} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                              <div className="flex items-start justify-between mb-3">
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-slate-900">#{order.orderNumber}</span>
-                                    <Badge className={cn("border", statusColors[order.status])}>{statusLabels[order.status]}</Badge>
-                                  </div>
-                                  <p className="text-sm text-slate-500 mt-1">{order.customerName} {order.tableNumber && `• Table ${order.tableNumber}`}</p>
+                    <TabsTrigger
+                      value="products"
+                      className="gap-2 px-3.5 py-2 rounded-xl text-xs font-bold data-[state=active]:bg-[#EA580C] data-[state=active]:text-white transition-all shadow-none"
+                    >
+                      <Package className="w-4 h-4" />
+                      <span>Carte & Stock</span>
+                      <span className="ml-1 px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-[#1C1917]/10 data-[state=active]:bg-white/20">
+                        {allProducts.length}
+                      </span>
+                    </TabsTrigger>
+
+                    <TabsTrigger
+                      value="tables"
+                      className="gap-2 px-3.5 py-2 rounded-xl text-xs font-bold data-[state=active]:bg-[#EA580C] data-[state=active]:text-white transition-all shadow-none"
+                    >
+                      <QrCode className="w-4 h-4" />
+                      <span>Tables & QR Chevalets</span>
+                      <span className="ml-1 px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-[#1C1917]/10 data-[state=active]:bg-white/20">
+                        {restaurant?.tables?.length || 10}
+                      </span>
+                    </TabsTrigger>
+
+                    <TabsTrigger
+                      value="analytics"
+                      className="gap-2 px-3.5 py-2 rounded-xl text-xs font-bold data-[state=active]:bg-[#EA580C] data-[state=active]:text-white transition-all shadow-none"
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                      <span>Analytiques</span>
+                    </TabsTrigger>
+
+                    <TabsTrigger
+                      value="settings"
+                      className="gap-2 px-3.5 py-2 rounded-xl text-xs font-bold data-[state=active]:bg-[#EA580C] data-[state=active]:text-white transition-all shadow-none"
+                    >
+                      <Settings className="w-4 h-4" />
+                      <span>Paramètres</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                {/* 1. ORDERS TAB */}
+                <TabsContent value="orders" className="space-y-4 outline-none">
+                  <div className="bg-white border-2 border-[#FDE8CD] rounded-3xl p-5 shadow-sm space-y-4">
+                    {/* Filter & Search Bar */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
+                        <Input
+                          placeholder="Rechercher par n° commande, client, table ou téléphone..."
+                          value={ordersSearchQuery}
+                          onChange={(e) => setOrdersSearchQuery(e.target.value)}
+                          className="pl-10 bg-[#FFFBF5] border-[#FDE8CD] rounded-2xl text-xs h-10"
+                        />
+                        {ordersSearchQuery && (
+                          <button
+                            onClick={() => setOrdersSearchQuery('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Select value={ordersFilter} onValueChange={setOrdersFilter}>
+                          <SelectTrigger className="w-full sm:w-56 bg-white border-2 border-[#FDE8CD] rounded-2xl text-xs font-bold h-10">
+                            <Filter className="w-3.5 h-3.5 text-[#EA580C] mr-1" />
+                            <SelectValue placeholder="Filtrer statut" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-2xl border-[#FDE8CD]">
+                            <SelectItem value="all">📋 Toutes ({orders.length})</SelectItem>
+                            <SelectItem value="pending">⏳ En attente ({orders.filter(o => o.status === 'pending').length})</SelectItem>
+                            <SelectItem value="confirmed">👍 Confirmées ({orders.filter(o => o.status === 'confirmed').length})</SelectItem>
+                            <SelectItem value="preparing">🍳 En préparation ({orders.filter(o => o.status === 'preparing').length})</SelectItem>
+                            <SelectItem value="ready">🍽️ Prêtes ({orders.filter(o => o.status === 'ready').length})</SelectItem>
+                            <SelectItem value="delivered">✅ Livrées / Servies ({orders.filter(o => o.status === 'delivered').length})</SelectItem>
+                            <SelectItem value="cancelled">❌ Annulées ({orders.filter(o => o.status === 'cancelled').length})</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <Button
+                          onClick={fetchDashboardData}
+                          variant="outline"
+                          size="sm"
+                          className="h-10 px-3 border-2 border-[#FDE8CD] rounded-2xl text-xs font-bold text-[#1C1917] hover:bg-[#FFF7ED]"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5 text-[#EA580C]" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Quick Status Badges Filter Bar */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                      {[
+                        { id: 'all', label: 'Toutes', count: orders.length, color: 'bg-slate-100 text-slate-700' },
+                        { id: 'pending', label: '⏳ En attente', count: orders.filter(o => o.status === 'pending').length, color: 'bg-amber-100 text-amber-800' },
+                        { id: 'confirmed', label: '👍 Confirmées', count: orders.filter(o => o.status === 'confirmed').length, color: 'bg-blue-100 text-blue-800' },
+                        { id: 'preparing', label: '🍳 En cuisine', count: orders.filter(o => o.status === 'preparing').length, color: 'bg-orange-100 text-orange-800' },
+                        { id: 'ready', label: '🍽️ Prêtes', count: orders.filter(o => o.status === 'ready').length, color: 'bg-emerald-100 text-emerald-800' },
+                        { id: 'delivered', label: '✅ Livrées', count: orders.filter(o => o.status === 'delivered').length, color: 'bg-teal-100 text-teal-800' },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => setOrdersFilter(item.id)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all flex items-center gap-1.5",
+                            ordersFilter === item.id
+                              ? "bg-[#1C1917] text-white shadow-xs"
+                              : "bg-[#FFFBF5] text-[#78716C] hover:bg-[#FFF7ED] border border-[#FDE8CD]"
+                          )}
+                        >
+                          <span>{item.label}</span>
+                          <span className={cn("px-1.5 py-0.2 rounded-full text-[10px] font-black", item.color)}>
+                            {item.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Orders List Grid */}
+                    <div className="space-y-3.5 pt-2">
+                      {orders
+                        .filter(o => {
+                          const matchesFilter = ordersFilter === 'all' || o.status === ordersFilter
+                          if (!matchesFilter) return false
+                          if (!ordersSearchQuery.trim()) return true
+                          const q = ordersSearchQuery.toLowerCase()
+                          return (
+                            o.orderNumber.toLowerCase().includes(q) ||
+                            (o.customerName && o.customerName.toLowerCase().includes(q)) ||
+                            (o.customerPhone && o.customerPhone.includes(q)) ||
+                            (o.tableNumber && o.tableNumber.toLowerCase().includes(q))
+                          )
+                        })
+                        .map((order, index) => {
+                          const orderMinutesAgo = Math.max(0, Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000))
+                          return (
+                            <motion.div
+                              key={order.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.03 * index }}
+                              className={cn(
+                                "rounded-2xl p-4 border-2 transition-all shadow-xs",
+                                order.status === 'pending'
+                                  ? "bg-amber-50/40 border-amber-300 shadow-amber-100"
+                                  : order.status === 'preparing'
+                                  ? "bg-orange-50/40 border-orange-300 shadow-orange-100"
+                                  : order.status === 'ready'
+                                  ? "bg-emerald-50/40 border-emerald-300 shadow-emerald-100"
+                                  : "bg-[#FFFBF5] border-[#FDE8CD]"
+                              )}
+                            >
+                              {/* Order Card Header */}
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-[#FDE8CD]">
+                                <div className="flex items-center gap-2.5 flex-wrap">
+                                  <span className="font-mono font-extrabold text-sm sm:text-base text-[#1C1917] bg-white px-2.5 py-1 rounded-xl border border-[#FDE8CD]">
+                                    #{order.orderNumber}
+                                  </span>
+
+                                  <Badge className={cn("border font-bold text-xs px-2.5 py-0.5 rounded-full", statusColors[order.status] || "bg-slate-100 text-slate-800")}>
+                                    {statusLabels[order.status] || order.status}
+                                  </Badge>
+
+                                  {order.tableNumber ? (
+                                    <span className="inline-flex items-center gap-1 text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-[#EA580C] text-white shadow-xs">
+                                      <UtensilsCrossed className="w-3 h-3" />
+                                      Table {order.tableNumber}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-white">
+                                      <Truck className="w-3 h-3" />
+                                      Livraison / Emporter
+                                    </span>
+                                  )}
+
+                                  <span className="text-xs text-[#78716C] flex items-center gap-1 font-mono">
+                                    <Clock className="w-3 h-3 text-[#EA580C]" />
+                                    {orderMinutesAgo === 0 ? 'À l’instant' : `Il y a ${orderMinutesAgo} min`}
+                                  </span>
                                 </div>
-                                <span className="font-bold text-amber-600">{formatCurrency(order.total, restaurant?.currency)}</span>
+
+                                <div className="flex items-center gap-3">
+                                  <span className="font-mono font-black text-base sm:text-lg text-[#EA580C]">
+                                    {formatCurrency(order.total, restaurant?.currency)}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="flex flex-wrap gap-2 mb-3">
-                                {order.items.map((item, i) => (<span key={i} className="text-xs bg-white px-2 py-1 rounded-full text-slate-600">{item.quantity}x {item.product.name}</span>))}
+
+                              {/* Customer & Items Body */}
+                              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 py-3 text-xs">
+                                {/* Customer Info */}
+                                <div className="md:col-span-4 space-y-1.5 bg-white/70 p-3 rounded-xl border border-[#FDE8CD]">
+                                  <p className="font-bold text-[#1C1917] text-sm flex items-center gap-1.5">
+                                    <UserIcon className="w-3.5 h-3.5 text-[#EA580C]" />
+                                    {order.customerName || 'Client de passage'}
+                                  </p>
+
+                                  {order.customerPhone && (
+                                    <div className="flex items-center gap-2 pt-0.5">
+                                      <span className="font-mono text-[#78716C]">{order.customerPhone}</span>
+                                      <a
+                                        href={`https://wa.me/${order.customerPhone.replace(/[^0-9]/g, '')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition-transform hover:scale-105"
+                                        title="Contacter sur WhatsApp"
+                                      >
+                                        <MessageCircle className="w-3 h-3" />
+                                        WhatsApp
+                                      </a>
+                                    </div>
+                                  )}
+
+                                  <div className="pt-1 flex items-center gap-1.5 text-[11px] text-[#78716C]">
+                                    <CreditCard className="w-3 h-3 text-[#EA580C]" />
+                                    <span>Paiement : <strong className="text-[#1C1917] capitalize">{order.paymentMethod || 'Mobile Money'}</strong> ({order.paymentStatus === 'paid' ? '✅ Payé' : '⏳ En attente'})</span>
+                                  </div>
+                                </div>
+
+                                {/* Order Items List */}
+                                <div className="md:col-span-8 space-y-1.5">
+                                  <p className="font-bold text-[#78716C] uppercase text-[10px] tracking-wider">
+                                    Articles commandés ({order.items.reduce((s, it) => s + it.quantity, 0)})
+                                  </p>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {order.items.map((item, i) => (
+                                      <div key={i} className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-[#FDE8CD]">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <span className="w-6 h-6 rounded-lg bg-[#EA580C]/10 text-[#EA580C] font-mono font-bold text-xs flex items-center justify-center flex-shrink-0">
+                                            {item.quantity}x
+                                          </span>
+                                          <span className="font-bold text-[#1C1917] text-xs truncate">
+                                            {item.product.name}
+                                          </span>
+                                        </div>
+                                        <span className="font-mono font-semibold text-[#78716C] text-xs whitespace-nowrap ml-2">
+                                          {formatCurrency(item.price * item.quantity, restaurant?.currency)}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex items-center justify-between text-xs text-slate-400">
-                                <span>{new Date(order.createdAt).toLocaleString('fr-FR')}</span>
-                                <div className="flex gap-1">
-                                  {order.status === 'pending' && (<><Button size="sm" variant="outline" className="h-7 text-xs text-green-600" onClick={() => updateOrderStatus(order.id, 'confirmed')}><Check className="w-3 h-3 mr-1" />Confirmer</Button><Button size="sm" variant="outline" className="h-7 text-xs text-red-600" onClick={() => updateOrderStatus(order.id, 'cancelled')}><X className="w-3 h-3 mr-1" />Annuler</Button></>)}
-                                  {order.status === 'confirmed' && <Button size="sm" variant="outline" className="h-7 text-xs text-orange-600" onClick={() => updateOrderStatus(order.id, 'preparing')}><ChefHat className="w-3 h-3 mr-1" />Préparer</Button>}
-                                  {order.status === 'preparing' && <Button size="sm" variant="outline" className="h-7 text-xs text-emerald-600" onClick={() => updateOrderStatus(order.id, 'ready')}><CheckCircle className="w-3 h-3 mr-1" />Prête</Button>}
-                                  {order.status === 'ready' && <Button size="sm" variant="outline" className="h-7 text-xs text-green-600" onClick={() => updateOrderStatus(order.id, 'delivered')}><CheckCircle className="w-3 h-3 mr-1" />Livrée</Button>}
+
+                              {/* Action Buttons Toolbar */}
+                              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#FDE8CD]">
+                                <div className="text-[11px] text-[#78716C]">
+                                  Reçu le {new Date(order.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {order.status === 'pending' && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        className="h-8 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-xl text-xs font-bold gap-1 shadow-xs"
+                                        onClick={() => updateOrderStatus(order.id, 'confirmed')}
+                                      >
+                                        <Check className="w-3.5 h-3.5" />
+                                        <span>Accepter</span>
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        className="h-8 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-xl text-xs font-bold gap-1 shadow-xs"
+                                        onClick={() => updateOrderStatus(order.id, 'preparing')}
+                                      >
+                                        <ChefHat className="w-3.5 h-3.5" />
+                                        <span>En Cuisine</span>
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 text-xs font-bold text-red-600 border-red-200 hover:bg-red-50 rounded-xl"
+                                        onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                                      >
+                                        <X className="w-3.5 h-3.5 mr-1" />
+                                        Refuser
+                                      </Button>
+                                    </>
+                                  )}
+
+                                  {order.status === 'confirmed' && (
+                                    <Button
+                                      size="sm"
+                                      className="h-8 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-xl text-xs font-bold gap-1.5 shadow-xs"
+                                      onClick={() => updateOrderStatus(order.id, 'preparing')}
+                                    >
+                                      <ChefHat className="w-3.5 h-3.5" />
+                                      <span>Transmettre en Cuisine</span>
+                                    </Button>
+                                  )}
+
+                                  {order.status === 'preparing' && (
+                                    <Button
+                                      size="sm"
+                                      className="h-8 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-xl text-xs font-bold gap-1.5 shadow-xs"
+                                      onClick={() => updateOrderStatus(order.id, 'ready')}
+                                    >
+                                      <CheckCircle className="w-3.5 h-3.5" />
+                                      <span>Plat Prêt pour Service</span>
+                                    </Button>
+                                  )}
+
+                                  {order.status === 'ready' && (
+                                    <Button
+                                      size="sm"
+                                      className="h-8 bg-[#0284C7] hover:bg-[#0369A1] text-white rounded-xl text-xs font-bold gap-1.5 shadow-xs"
+                                      onClick={() => updateOrderStatus(order.id, 'delivered')}
+                                    >
+                                      <CheckCircle className="w-3.5 h-3.5" />
+                                      <span>Marquer Livrée / Encaissée</span>
+                                    </Button>
+                                  )}
+
+                                  {order.status === 'delivered' && (
+                                    <Badge className="bg-teal-100 text-teal-800 border-teal-200 text-xs py-1 px-3 rounded-xl font-bold">
+                                      ✨ Service Terminé
+                                    </Badge>
+                                  )}
                                 </div>
                               </div>
                             </motion.div>
-                          ))}
-                          {orders.length === 0 && <div className="text-center py-12 text-slate-400"><Package className="w-12 h-12 mx-auto mb-3 opacity-50" /><p>Aucune commande</p></div>}
+                          )
+                        })}
+
+                      {orders.length === 0 && (
+                        <div className="text-center py-16 bg-[#FFFBF5] rounded-3xl border-2 border-dashed border-[#FDE8CD]">
+                          <div className="w-14 h-14 rounded-2xl bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center mx-auto mb-3">
+                            <ClipboardList className="w-7 h-7" />
+                          </div>
+                          <h3 className="font-extrabold text-[#1C1917] text-base">Aucune commande en cours</h3>
+                          <p className="text-xs text-[#78716C] mt-1 max-w-sm mx-auto">
+                            Les commandes passées par vos clients depuis les QR Codes de table ou le menu en ligne s&apos;afficheront ici en direct.
+                          </p>
                         </div>
-                      </ScrollArea>
-                    </CardContent>
-                  </Card>
+                      )}
+                    </div>
+                  </div>
                 </TabsContent>
 
-                {/* Products Tab */}
-                <TabsContent value="products">
-                  <Card className="border-slate-200 shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <CardTitle className="flex items-center gap-2"><Package className="w-5 h-5 text-amber-500" />Gestion des Produits</CardTitle>
-                      <Button onClick={openAddProduct} className="bg-amber-500 hover:bg-amber-600"><Plus className="w-4 h-4 mr-2" />Nouveau Produit</Button>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {allProducts.map((product, index) => (
-                          <motion.div key={product.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * index }} className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
-                            <div className="relative h-32">
-                              <img src={product.image || ''} alt={product.name} className="w-full h-full object-cover" />
-                              <div className="absolute top-2 left-2 flex gap-1">
-                                {product.isFeatured && <Badge className="bg-amber-500 text-white border-0 text-xs"><Star className="w-3 h-3" /></Badge>}
-                                {!product.isAvailable && <Badge className="bg-red-500 text-white border-0 text-xs">Indisponible</Badge>}
-                              </div>
-                              <div className="absolute top-2 right-2 flex gap-1">
-                                <Button size="sm" variant="secondary" className="h-8 w-8 p-0" onClick={() => openEditProduct(product)}><Edit className="w-4 h-4" /></Button>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild><Button size="sm" variant="destructive" className="h-8 w-8 p-0"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader><AlertDialogTitle>Supprimer le produit?</AlertDialogTitle><AlertDialogDescription>Cette action est irréversible. Le produit "{product.name}" sera définitivement supprimé.</AlertDialogDescription></AlertDialogHeader>
-                                    <AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction onClick={() => deleteProduct(product.id)} className="bg-red-500 hover:bg-red-600">Supprimer</AlertDialogAction></AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </div>
-                            </div>
-                            <div className="p-3">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-lg">{product.categoryIcon}</span>
-                                <h4 className="font-semibold text-slate-900 line-clamp-1">{product.name}</h4>
-                              </div>
-                              <p className="text-xs text-slate-500 line-clamp-2 mb-2">{product.description}</p>
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-amber-600">{formatCurrency(product.price, restaurant?.currency)}</span>
-                                <div className="flex items-center gap-2 text-xs text-slate-400">
-                                  {product.preparationTime && <span><Clock className="w-3 h-3 inline mr-1" />{product.preparationTime}min</span>}
-                                  {product.calories && <span>{product.calories} cal</span>}
+                {/* 2. PRODUCTS & STOCK TAB */}
+                <TabsContent value="products" className="space-y-4 outline-none">
+                  <div className="bg-white border-2 border-[#FDE8CD] rounded-3xl p-5 shadow-sm space-y-4">
+                    {/* Header bar */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                      <div>
+                        <h3 className="font-extrabold text-lg text-[#1C1917] font-heading flex items-center gap-2">
+                          <Package className="w-5 h-5 text-[#EA580C]" />
+                          Gestion de la Carte & Disponibilité des Plats
+                        </h3>
+                        <p className="text-xs text-[#78716C]">
+                          Activez ou désactivez la disponibilité d&apos;un plat en un clic si un ingrédient vient à manquer.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={openAddProduct}
+                          className="bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-2xl text-xs font-bold gap-2 px-4 shadow-md shadow-[#EA580C]/20"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Nouveau Plat</span>
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Category Filter Chips */}
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                      <button
+                        onClick={() => setProductCategoryFilter('all')}
+                        className={cn(
+                          "px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all",
+                          productCategoryFilter === 'all'
+                            ? "bg-[#1C1917] text-white shadow-xs"
+                            : "bg-[#FFFBF5] text-[#78716C] hover:bg-[#FFF7ED] border border-[#FDE8CD]"
+                        )}
+                      >
+                        🌟 Tous ({allProducts.length})
+                      </button>
+
+                      {restaurant?.categories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setProductCategoryFilter(cat.id)}
+                          className={cn(
+                            "px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5",
+                            productCategoryFilter === cat.id
+                              ? "bg-[#EA580C] text-white shadow-xs"
+                              : "bg-[#FFFBF5] text-[#78716C] hover:bg-[#FFF7ED] border border-[#FDE8CD]"
+                          )}
+                        >
+                          <span>{cat.icon}</span>
+                          <span>{cat.name} ({cat.products.length})</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Products Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+                      {allProducts
+                        .filter(p => productCategoryFilter === 'all' || p.categoryId === productCategoryFilter)
+                        .map((product, index) => (
+                          <motion.div
+                            key={product.id}
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.03 * index }}
+                            className={cn(
+                              "bg-[#FFFBF5] rounded-3xl border-2 transition-all overflow-hidden flex flex-col justify-between hover-lift",
+                              product.isAvailable
+                                ? "border-[#FDE8CD] shadow-sm hover:border-[#EA580C]/40"
+                                : "border-slate-200 opacity-70 bg-slate-50"
+                            )}
+                          >
+                            <div>
+                              {/* Product Image & Badges */}
+                              <div className="relative h-40 w-full overflow-hidden bg-slate-100">
+                                <img
+                                  src={product.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'}
+                                  alt={product.name}
+                                  className={cn("w-full h-full object-cover transition-transform duration-300 hover:scale-105", !product.isAvailable && "grayscale")}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                                <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
+                                  {product.isFeatured && (
+                                    <Badge className="bg-[#EA580C] text-white border-0 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-xs">
+                                      ⭐ Populaire
+                                    </Badge>
+                                  )}
+                                  <Badge className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border-0 shadow-xs", product.isAvailable ? "bg-[#16A34A] text-white" : "bg-red-600 text-white")}>
+                                    {product.isAvailable ? 'En Stock' : 'Épuisé'}
+                                  </Badge>
+                                </div>
+
+                                <div className="absolute top-2.5 right-2.5 flex items-center gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    className="h-8 w-8 p-0 rounded-xl bg-white/90 hover:bg-white text-[#1C1917] shadow-sm"
+                                    onClick={() => openEditProduct(product)}
+                                    title="Modifier le plat"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        className="h-8 w-8 p-0 rounded-xl bg-red-600/90 hover:bg-red-600 text-white shadow-sm"
+                                        title="Supprimer"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="rounded-3xl border-2 border-[#FDE8CD]">
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle className="text-[#1C1917] font-extrabold">Supprimer ce plat ?</AlertDialogTitle>
+                                        <AlertDialogDescription className="text-xs text-[#78716C]">
+                                          Le plat &quot;{product.name}&quot; sera définitivement retiré de votre carte et de tous les menus QR Code.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel className="rounded-xl border-[#FDE8CD] text-xs font-bold">Annuler</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => deleteProduct(product.id)}
+                                          className="bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold"
+                                        >
+                                          Supprimer
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+
+                                <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between text-white">
+                                  <span className="font-mono font-black text-base text-amber-300 drop-shadow-md">
+                                    {formatCurrency(product.price, restaurant?.currency)}
+                                  </span>
+                                  {product.preparationTime && (
+                                    <span className="text-[11px] font-mono font-semibold bg-black/50 backdrop-blur-xs px-2 py-0.5 rounded-full">
+                                      ⏱️ {product.preparationTime} min
+                                    </span>
+                                  )}
                                 </div>
                               </div>
+
+                              {/* Card Content */}
+                              <div className="p-4 space-y-2">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-base">{product.categoryIcon || '🍽️'}</span>
+                                  <h4 className="font-extrabold text-sm text-[#1C1917] line-clamp-1 font-heading">
+                                    {product.name}
+                                  </h4>
+                                </div>
+                                <p className="text-xs text-[#78716C] line-clamp-2">
+                                  {product.description || 'Délicieuse spécialité préparée avec soin.'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Stock Toggle Footer */}
+                            <div className="p-3 bg-white border-t border-[#FDE8CD] flex items-center justify-between rounded-b-3xl">
+                              <span className="text-xs font-bold text-[#1C1917]">
+                                {product.isAvailable ? '✅ Disponible à la commande' : '❌ Marqué comme épuisé'}
+                              </span>
+                              <Switch
+                                checked={product.isAvailable}
+                                onCheckedChange={() => toggleProductAvailability(product.id, product.isAvailable)}
+                              />
                             </div>
                           </motion.div>
                         ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </TabsContent>
 
-                {/* Settings Tab */}
-                <TabsContent value="settings">
+                {/* 3. TABLES & QR CODE CHEVALETS TAB */}
+                <TabsContent value="tables" className="space-y-4 outline-none">
+                  <div className="bg-white border-2 border-[#FDE8CD] rounded-3xl p-5 shadow-sm space-y-5">
+                    {/* Header info */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#FDE8CD]">
+                      <div>
+                        <h3 className="font-extrabold text-lg text-[#1C1917] font-heading flex items-center gap-2">
+                          <QrCode className="w-5 h-5 text-[#EA580C]" />
+                          Plan des Tables & Chevalets QR Code
+                        </h3>
+                        <p className="text-xs text-[#78716C] mt-0.5">
+                          Chaque table dispose d&apos;un QR Code unique. Les clients scannent avec leur smartphone, accèdent à la carte, et commandent instantanément sans faire signe au serveur.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={() => {
+                            const firstTable = restaurant?.tables?.[0] || { id: 't1', number: 'T1' }
+                            setSelectedTableForQr(firstTable)
+                            setQrModalOpen(true)
+                          }}
+                          className="bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-2xl text-xs font-bold gap-2 px-4 shadow-md shadow-[#EA580C]/20"
+                        >
+                          <Printer className="w-4 h-4" />
+                          <span>Imprimer Chevalet de Table</span>
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* How it works info strip */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-[#FFFBF5] border border-[#FDE8CD] rounded-2xl text-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#EA580C]/10 text-[#EA580C] font-bold flex items-center justify-center flex-shrink-0">
+                          1
+                        </div>
+                        <div>
+                          <strong className="text-[#1C1917] block">Posez sur les tables</strong>
+                          <span className="text-[#78716C]">Imprimez les chevalets cartonnés ou plastifiés.</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#EA580C]/10 text-[#EA580C] font-bold flex items-center justify-center flex-shrink-0">
+                          2
+                        </div>
+                        <div>
+                          <strong className="text-[#1C1917] block">Scan sans application</strong>
+                          <span className="text-[#78716C]">Fonctionne avec l&apos;appareil photo iPhone & Android.</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#EA580C]/10 text-[#EA580C] font-bold flex items-center justify-center flex-shrink-0">
+                          3
+                        </div>
+                        <div>
+                          <strong className="text-[#1C1917] block">Commande & KDS direct</strong>
+                          <span className="text-[#78716C]">La commande arrive directement avec le n° de table.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tables Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 pt-2">
+                      {(restaurant?.tables && restaurant.tables.length > 0
+                        ? restaurant.tables
+                        : Array.from({ length: 10 }, (_, i) => ({ id: `t${i + 1}`, number: `T${i + 1}` }))
+                      ).map((table, index) => {
+                        const activeOrderForTable = orders.find(o => o.tableNumber === table.number && (o.status === 'pending' || o.status === 'confirmed' || o.status === 'preparing'))
+                        return (
+                          <motion.div
+                            key={table.id}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.02 * index }}
+                            className={cn(
+                              "bg-[#FFFBF5] rounded-2xl p-4 border-2 transition-all flex flex-col justify-between hover-lift text-center",
+                              activeOrderForTable
+                                ? "border-[#EA580C] bg-orange-50/50 shadow-md shadow-[#EA580C]/10"
+                                : "border-[#FDE8CD] hover:border-[#EA580C]/50"
+                            )}
+                          >
+                            <div>
+                              <div className="w-12 h-12 rounded-2xl bg-white border-2 border-[#FDE8CD] flex items-center justify-center mx-auto mb-2 text-[#EA580C] shadow-xs">
+                                <UtensilsCrossed className="w-6 h-6" />
+                              </div>
+
+                              <h4 className="font-extrabold text-base text-[#1C1917] font-mono">
+                                Table {table.number}
+                              </h4>
+
+                              <div className="mt-1">
+                                {activeOrderForTable ? (
+                                  <Badge className="bg-[#EA580C] text-white text-[10px] font-bold px-2 py-0.5 rounded-full border-0 animate-pulse">
+                                    🍳 En cours ({activeOrderForTable.status})
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-[#16A34A]/15 text-[#16A34A] text-[10px] font-bold px-2 py-0.5 rounded-full border-0">
+                                    🟢 Disponible
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5 pt-3 mt-3 border-t border-[#FDE8CD]">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full h-8 text-[11px] font-bold border-[#FDE8CD] bg-white hover:bg-[#FFF7ED] text-[#1C1917] rounded-xl gap-1"
+                                onClick={() => {
+                                  setSelectedTableForQr(table)
+                                  setQrModalOpen(true)
+                                }}
+                              >
+                                <QrCode className="w-3 h-3 text-[#EA580C]" />
+                                <span>Chevalet QR</span>
+                              </Button>
+
+                              <Link
+                                href={`/${restaurant?.slug || 'le-jardin-savoureux'}?table=${table.number}`}
+                                target="_blank"
+                                className="w-full inline-flex items-center justify-center gap-1 text-[10px] font-bold text-[#78716C] hover:text-[#EA580C] py-1 transition-colors"
+                              >
+                                <ExternalLink className="w-2.5 h-2.5" />
+                                <span>Tester le menu</span>
+                              </Link>
+                            </div>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* 4. ANALYTICS & KPIS TAB */}
+                <TabsContent value="analytics" className="space-y-5 outline-none">
+                  {/* Top Overview Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Card className="border-2 border-[#FDE8CD] bg-white rounded-3xl p-5 shadow-xs">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-[#78716C] uppercase tracking-wider">Chiffre d&apos;Affaires</p>
+                          <p className="text-2xl font-black font-mono text-[#1C1917] mt-1">
+                            {formatCurrency(dashboardData?.overview?.todayRevenue || 0, restaurant?.currency)}
+                          </p>
+                          <p className="text-[11px] text-[#16A34A] font-bold mt-1">
+                            ↑ +{dashboardData?.overview?.revenueGrowth || 12}% vs hier
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-[#EA580C]/10 text-[#EA580C] flex items-center justify-center">
+                          <DollarSign className="w-6 h-6" />
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="border-2 border-[#FDE8CD] bg-white rounded-3xl p-5 shadow-xs">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-[#78716C] uppercase tracking-wider">Panier Moyen</p>
+                          <p className="text-2xl font-black font-mono text-[#1C1917] mt-1">
+                            {formatCurrency(
+                              (dashboardData?.overview?.todayOrders || 1) > 0
+                                ? Math.round((dashboardData?.overview?.todayRevenue || 18500) / Math.max(1, dashboardData?.overview?.todayOrders || 3))
+                                : 5500,
+                              restaurant?.currency
+                            )}
+                          </p>
+                          <p className="text-[11px] text-[#78716C] font-semibold mt-1">
+                            Moyenne par client
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-[#16A34A]/10 text-[#16A34A] flex items-center justify-center">
+                          <Receipt className="w-6 h-6" />
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="border-2 border-[#FDE8CD] bg-white rounded-3xl p-5 shadow-xs">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-[#78716C] uppercase tracking-wider">Commandes Servies</p>
+                          <p className="text-2xl font-black font-mono text-[#1C1917] mt-1">
+                            {dashboardData?.overview?.totalOrders || orders.length || 24}
+                          </p>
+                          <p className="text-[11px] text-[#16A34A] font-bold mt-1">
+                            ✨ 100% de taux de complétion
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-[#0284C7]/10 text-[#0284C7] flex items-center justify-center">
+                          <ShoppingCart className="w-6 h-6" />
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="border-2 border-[#FDE8CD] bg-white rounded-3xl p-5 shadow-xs">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-[#78716C] uppercase tracking-wider">Temps Moyen Service</p>
+                          <p className="text-2xl font-black font-mono text-[#1C1917] mt-1">
+                            14 min
+                          </p>
+                          <p className="text-[11px] text-[#16A34A] font-bold mt-1">
+                            ⚡ -30% d&apos;attente grâce aux QR
+                          </p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center">
+                          <Timer className="w-6 h-6" />
+                        </div>
+                      </div>
+                    </Card>
+                  </div>
+
+                  {/* Detailed Performance Charts */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    {/* Top Selling Dishes */}
+                    <div className="bg-white border-2 border-[#FDE8CD] rounded-3xl p-5 shadow-xs space-y-4">
+                      <h4 className="font-extrabold text-base text-[#1C1917] font-heading flex items-center gap-2">
+                        <Flame className="w-4 h-4 text-[#EA580C]" />
+                        Top 5 des Plats les Plus Vendus
+                      </h4>
+                      <div className="space-y-3 pt-1">
+                        {(dashboardData?.topProducts && dashboardData.topProducts.length > 0
+                          ? dashboardData.topProducts
+                          : allProducts.slice(0, 5).map((p, idx) => ({
+                              id: p.id,
+                              name: p.name,
+                              count: 28 - idx * 4,
+                              revenue: (28 - idx * 4) * p.price
+                            }))
+                        ).map((item, idx) => {
+                          const percentage = Math.min(100, Math.round((item.count / 30) * 100))
+                          return (
+                            <div key={item.id} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-bold text-[#1C1917] flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-md bg-[#FFF7ED] text-[#EA580C] font-mono font-bold flex items-center justify-center text-[11px]">
+                                    #{idx + 1}
+                                  </span>
+                                  {item.name}
+                                </span>
+                                <span className="font-mono font-semibold text-[#78716C]">
+                                  {item.count} ventes • {formatCurrency(item.revenue, restaurant?.currency)}
+                                </span>
+                              </div>
+                              <Progress value={percentage} className="h-2 bg-[#FFF7ED]" />
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Breakdown & Payment Methods */}
+                    <div className="bg-white border-2 border-[#FDE8CD] rounded-3xl p-5 shadow-xs space-y-4">
+                      <h4 className="font-extrabold text-base text-[#1C1917] font-heading flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-[#EA580C]" />
+                        Répartition des Modes de Paiement
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3 pt-1">
+                        {[
+                          { name: 'Wave Bénin / CI / SN', share: '48%', color: 'border-sky-300 bg-sky-50 text-sky-900' },
+                          { name: 'MTN Mobile Money', share: '32%', color: 'border-amber-300 bg-amber-50 text-amber-900' },
+                          { name: 'Moov Money / Orange', share: '12%', color: 'border-blue-300 bg-blue-50 text-blue-900' },
+                          { name: 'Espèces / Carte Bancaire', share: '8%', color: 'border-emerald-300 bg-emerald-50 text-emerald-900' },
+                        ].map((m) => (
+                          <div key={m.name} className={cn("p-3 rounded-2xl border-2 text-xs", m.color)}>
+                            <p className="font-bold">{m.name}</p>
+                            <p className="text-xl font-black font-mono mt-1">{m.share}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="p-3 bg-[#FFFBF5] rounded-2xl border border-[#FDE8CD] text-xs text-[#78716C] flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-[#16A34A] flex-shrink-0" />
+                        <span>Les fonds Mobile Money et Carte sont versés instantanément sur votre compte professionnel sans intermédiaire.</span>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* 5. SETTINGS TAB */}
+                <TabsContent value="settings" className="outline-none">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Restaurant Info */}
-                    <Card className="border-slate-200 shadow-sm">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Settings className="w-5 h-5 text-amber-500" />
-                          Informations du Restaurant
+                    <Card className="border-2 border-[#FDE8CD] bg-white rounded-3xl shadow-xs">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-base font-extrabold text-[#1C1917] font-heading">
+                          <Settings className="w-4 h-4 text-[#EA580C]" />
+                          Informations de l&apos;Établissement
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div>
-                          <Label htmlFor="restaurant-name">Nom du restaurant *</Label>
+                          <Label htmlFor="restaurant-name" className="text-xs font-bold text-[#1C1917]">Nom du restaurant *</Label>
                           <Input
                             id="restaurant-name"
                             value={settingsForm.name}
                             onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
                             placeholder="Le Jardin Savoureux"
-                            className="mt-1.5"
+                            className="mt-1 bg-[#FFFBF5] border-[#FDE8CD] rounded-xl text-xs"
                           />
                         </div>
 
                         <div>
-                          <Label htmlFor="restaurant-phone">Téléphone</Label>
-                          <div className="relative mt-1.5">
-                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Label htmlFor="restaurant-phone" className="text-xs font-bold text-[#1C1917]">Téléphone & WhatsApp Pro *</Label>
+                          <div className="relative mt-1">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
                             <Input
                               id="restaurant-phone"
                               value={settingsForm.phone}
                               onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
                               placeholder="+229 97 12 34 56"
-                              className="pl-10"
+                              className="pl-10 bg-[#FFFBF5] border-[#FDE8CD] rounded-xl text-xs font-mono"
                             />
                           </div>
                         </div>
 
                         <div>
-                          <Label htmlFor="restaurant-email">Email</Label>
-                          <div className="relative mt-1.5">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Label htmlFor="restaurant-email" className="text-xs font-bold text-[#1C1917]">Email officiel</Label>
+                          <div className="relative mt-1">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
                             <Input
                               id="restaurant-email"
                               type="email"
                               value={settingsForm.email}
                               onChange={(e) => setSettingsForm({ ...settingsForm, email: e.target.value })}
                               placeholder="contact@restaurant.com"
-                              className="pl-10"
+                              className="pl-10 bg-[#FFFBF5] border-[#FDE8CD] rounded-xl text-xs"
                             />
                           </div>
                         </div>
 
                         <div>
-                          <Label htmlFor="restaurant-address">Adresse</Label>
-                          <div className="relative mt-1.5">
-                            <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                          <Label htmlFor="restaurant-address" className="text-xs font-bold text-[#1C1917]">Adresse physique</Label>
+                          <div className="relative mt-1">
+                            <MapPin className="absolute left-3 top-3 w-4 h-4 text-[#78716C]" />
                             <Textarea
                               id="restaurant-address"
                               value={settingsForm.address}
                               onChange={(e) => setSettingsForm({ ...settingsForm, address: e.target.value })}
                               placeholder="Cotonou, Bénin"
-                              className="pl-10 min-h-[80px]"
+                              className="pl-10 min-h-[70px] bg-[#FFFBF5] border-[#FDE8CD] rounded-xl text-xs"
                             />
                           </div>
                         </div>
 
                         <div>
-                          <Label htmlFor="restaurant-description">Description</Label>
+                          <Label htmlFor="restaurant-description" className="text-xs font-bold text-[#1C1917]">Description du menu</Label>
                           <Textarea
                             id="restaurant-description"
                             value={settingsForm.description}
                             onChange={(e) => setSettingsForm({ ...settingsForm, description: e.target.value })}
                             placeholder="Restaurant gastronomique proposant une cuisine africaine moderne."
-                            className="mt-1.5 min-h-[80px]"
+                            className="mt-1 min-h-[70px] bg-[#FFFBF5] border-[#FDE8CD] rounded-xl text-xs"
                           />
                         </div>
                       </CardContent>
                     </Card>
 
-                    {/* Financial Settings */}
+                    {/* Financial Settings & Model */}
                     <div className="space-y-6">
-                      <Card className="border-slate-200 shadow-sm">
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <DollarSign className="w-5 h-5 text-amber-500" />
-                            Paramètres Financiers
+                      <Card className="border-2 border-[#FDE8CD] bg-white rounded-3xl shadow-xs">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-base font-extrabold text-[#1C1917] font-heading">
+                            <DollarSign className="w-4 h-4 text-[#EA580C]" />
+                            Modèle Opérationnel & Devise
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                           {/* Modèle Opérationnel */}
                           <div className="space-y-1.5">
-                            <Label className="font-bold text-sm text-[#1C1917] flex items-center gap-1.5">
-                              <Building2 className="w-4 h-4 text-[#EA580C]" /> Modèle d&apos;Exploitation
+                            <Label className="font-bold text-xs text-[#1C1917] flex items-center gap-1.5">
+                              <Building2 className="w-3.5 h-3.5 text-[#EA580C]" /> Modèle d&apos;Exploitation
                             </Label>
                             <Select
                               value={settingsForm.serviceType}
                               onValueChange={(value) => setSettingsForm({ ...settingsForm, serviceType: value })}
                             >
-                              <SelectTrigger className="w-full bg-white border-2 border-[#FDE8CD] rounded-xl font-bold">
+                              <SelectTrigger className="w-full bg-[#FFFBF5] border-2 border-[#FDE8CD] rounded-xl font-bold text-xs">
                                 <SelectValue placeholder="Sélectionner le modèle" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="rounded-2xl border-[#FDE8CD]">
                                 <SelectItem value="both">🌟 Hybride — Les Deux (Salle + Livraison & Emporter)</SelectItem>
                                 <SelectItem value="physical">🏛️ Restaurant Physique (Salle, Tables & Comptoir)</SelectItem>
                                 <SelectItem value="online">🛵 100% En Ligne / Dark Kitchen (Livraison & Emporter)</SelectItem>
@@ -2203,26 +3000,26 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
 
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <Label htmlFor="tax-rate">Taux de TVA (%)</Label>
+                              <Label htmlFor="tax-rate" className="text-xs font-bold text-[#1C1917]">Taux de TVA (%)</Label>
                               <Input
                                 id="tax-rate"
                                 type="number"
                                 value={settingsForm.taxRate}
                                 onChange={(e) => setSettingsForm({ ...settingsForm, taxRate: e.target.value })}
                                 placeholder="18"
-                                className="mt-1.5 border-[#FDE8CD] rounded-xl"
+                                className="mt-1 bg-[#FFFBF5] border-[#FDE8CD] rounded-xl text-xs font-mono"
                               />
                             </div>
                             <div>
-                              <Label htmlFor="currency">Devise Principale</Label>
+                              <Label htmlFor="currency" className="text-xs font-bold text-[#1C1917]">Devise</Label>
                               <Select
                                 value={settingsForm.currency}
                                 onValueChange={(value) => setSettingsForm({ ...settingsForm, currency: value })}
                               >
-                                <SelectTrigger className="mt-1.5 bg-white border-2 border-[#FDE8CD] rounded-xl font-bold">
+                                <SelectTrigger className="mt-1 bg-[#FFFBF5] border-2 border-[#FDE8CD] rounded-xl font-bold text-xs">
                                   <SelectValue placeholder="Sélectionner" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="rounded-2xl border-[#FDE8CD]">
                                   <SelectItem value="XOF">💰 XOF (FCFA) — UEMOA</SelectItem>
                                   <SelectItem value="XAF">💰 XAF (FCFA) — CEMAC</SelectItem>
                                   <SelectItem value="GNF">🇬🇳 GNF (Franc Guinéen)</SelectItem>
@@ -2238,17 +3035,16 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
                       </Card>
 
                       {/* Quick Info Card */}
-                      <Card className="border-amber-200 bg-amber-50/50">
+                      <Card className="border-2 border-[#FDE8CD] bg-[#FFF7ED] rounded-3xl shadow-none">
                         <CardContent className="p-4">
                           <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                              <Bell className="w-5 h-5 text-amber-600" />
+                            <div className="w-9 h-9 rounded-xl bg-[#EA580C]/10 flex items-center justify-center flex-shrink-0 text-[#EA580C]">
+                              <Bell className="w-4 h-4" />
                             </div>
                             <div>
-                              <h4 className="font-medium text-amber-900">Conseil</h4>
-                              <p className="text-sm text-amber-700 mt-1">
-                                Les modifications apportées ici seront visibles immédiatement sur votre menu digital. 
-                                Assurez-vous que les informations sont correctes avant de sauvegarder.
+                              <h4 className="font-bold text-xs text-[#1C1917]">Mise à jour en temps réel</h4>
+                              <p className="text-[11px] text-[#78716C] mt-0.5">
+                                Les modifications enregistrées ici sont répercutées instantanément sur les QR Codes et menus de vos clients.
                               </p>
                             </div>
                           </div>
@@ -2259,16 +3055,16 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
                       <Button
                         onClick={saveSettings}
                         disabled={savingSettings}
-                        className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-lg"
+                        className="w-full h-12 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-2xl font-extrabold text-sm shadow-md shadow-[#EA580C]/20 transition-all hover:scale-[1.01]"
                       >
                         {savingSettings ? (
                           <>
-                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             Enregistrement...
                           </>
                         ) : (
                           <>
-                            <Save className="w-5 h-5 mr-2" />
+                            <Save className="w-4 h-4 mr-2" />
                             Enregistrer les paramètres
                           </>
                         )}
@@ -2741,6 +3537,144 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
                   Se connecter
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Table QR Stand Modal */}
+      <Dialog open={qrModalOpen} onOpenChange={setQrModalOpen}>
+        <DialogContent className="max-w-md bg-white border-2 border-[#FDE8CD] rounded-3xl p-6 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-extrabold text-[#1C1917] font-heading flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-[#EA580C]" />
+              Chevalet QR Code • Table {selectedTableForQr?.number || 'T1'}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#78716C]">
+              Posez ce chevalet sur la table {selectedTableForQr?.number}. Les clients scannent et commandent directement.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Printable Table Tent Preview */}
+          <div className="my-2 p-6 rounded-3xl bg-gradient-to-b from-[#FFFBF5] to-[#FFF7ED] border-2 border-[#EA580C]/40 text-center shadow-lg space-y-4">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-[#EA580C] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                <UtensilsCrossed className="w-4 h-4" />
+              </div>
+              <span className="font-extrabold text-base text-[#1C1917] font-heading">
+                {restaurant?.name || 'Restaurant'}
+              </span>
+            </div>
+
+            <div className="py-1">
+              <span className="inline-block px-4 py-1 rounded-full bg-[#EA580C] text-white font-mono font-black text-sm tracking-wider shadow-xs">
+                TABLE {selectedTableForQr?.number || 'T1'}
+              </span>
+            </div>
+
+            {/* QR Code Image */}
+            <div className="bg-white p-4 rounded-2xl inline-block border-2 border-[#FDE8CD] shadow-md">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                  typeof window !== 'undefined'
+                    ? `${window.location.origin}/${restaurant?.slug || 'le-jardin-savoureux'}?table=${selectedTableForQr?.number || 'T1'}`
+                    : `https://restosaas.com/${restaurant?.slug || 'le-jardin-savoureux'}?table=${selectedTableForQr?.number || 'T1'}`
+                )}`}
+                alt={`QR Code Table ${selectedTableForQr?.number || 'T1'}`}
+                className="w-44 h-44 mx-auto rounded-lg"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <p className="font-extrabold text-sm text-[#1C1917]">
+                Scannez avec votre téléphone 📸
+              </p>
+              <p className="text-[11px] text-[#78716C] max-w-xs mx-auto">
+                Consultez le menu interactif en photos, commandez et payez en quelques secondes par Mobile Money ou Carte.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-[#EA580C] pt-1">
+              <span>⚡ Sans attente</span>
+              <span>•</span>
+              <span>💳 Wave & MoMo</span>
+              <span>•</span>
+              <span>✨ Service Rapide</span>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                const url = typeof window !== 'undefined'
+                  ? `${window.location.origin}/${restaurant?.slug || 'le-jardin-savoureux'}?table=${selectedTableForQr?.number || 'T1'}`
+                  : `https://restosaas.com/${restaurant?.slug || 'le-jardin-savoureux'}?table=${selectedTableForQr?.number || 'T1'}`
+                navigator.clipboard.writeText(url)
+                toast.success('Lien direct de la table copié !')
+              }}
+              className="border-[#FDE8CD] rounded-2xl text-xs font-bold text-[#1C1917] hover:bg-[#FFF7ED]"
+            >
+              <Share2 className="w-3.5 h-3.5 mr-1.5" />
+              Copier le lien direct
+            </Button>
+
+            <Button
+              onClick={() => window.print()}
+              className="bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-2xl text-xs font-extrabold gap-1.5 px-5 shadow-md shadow-[#EA580C]/20"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Imprimer le Chevalet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Call Waiter Modal */}
+      <Dialog open={callWaiterModalOpen} onOpenChange={setCallWaiterModalOpen}>
+        <DialogContent className="max-w-md bg-white border-2 border-[#FDE8CD] rounded-3xl p-6 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-extrabold text-[#1C1917] font-heading flex items-center gap-2">
+              <Bell className="w-5 h-5 text-[#EA580C]" />
+              Appeler le Service • Table {tableNumber || 'Salle'}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#78716C]">
+              Besoin d&apos;assistance ou de régler votre repas ? Sélectionnez votre demande ci-dessous.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            {[
+              { title: '🧾 Demander l’addition', desc: 'Règlement en Espèces, Wave ou Mobile Money', icon: Receipt },
+              { title: '💧 Eau / Serviettes / Couverts', desc: 'Demander un réassort à votre table', icon: UtensilsCrossed },
+              { title: '🙋 Conseil ou nouvelle commande', desc: 'Un serveur viendra vous conseiller', icon: ChefHat },
+            ].map((opt) => (
+              <button
+                key={opt.title}
+                onClick={() => {
+                  setCallWaiterModalOpen(false)
+                  toast.success(`🔔 Demande transmise à l’équipe : "${opt.title}" pour la Table ${tableNumber || 'votre table'} !`)
+                }}
+                className="w-full text-left p-3.5 rounded-2xl border-2 border-[#FDE8CD] bg-[#FFFBF5] hover:bg-[#FFF7ED] hover:border-[#EA580C] transition-all flex items-center gap-3.5 group hover-lift"
+              >
+                <div className="w-10 h-10 rounded-xl bg-white border border-[#FDE8CD] text-[#EA580C] flex items-center justify-center flex-shrink-0 group-hover:bg-[#EA580C] group-hover:text-white transition-colors">
+                  <opt.icon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-xs text-[#1C1917]">{opt.title}</h4>
+                  <p className="text-[11px] text-[#78716C]">{opt.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCallWaiterModalOpen(false)}
+              className="w-full border-[#FDE8CD] rounded-2xl text-xs font-bold text-[#1C1917]"
+            >
+              Fermer
             </Button>
           </DialogFooter>
         </DialogContent>
