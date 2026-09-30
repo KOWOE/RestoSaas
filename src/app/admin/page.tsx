@@ -649,6 +649,16 @@ export default function AdminPage() {
                   </>
                 )}
               </Button>
+
+              <div className="pt-2 text-center">
+                <Link
+                  href="/admin/super-admin"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#EA580C] hover:underline"
+                >
+                  <Crown className="w-3.5 h-3.5" />
+                  <span>Vous êtes le créateur du SaaS ? Accéder au Cockpit Fondateur</span>
+                </Link>
+              </div>
             </form>
           </motion.div>
         </div>
@@ -710,6 +720,17 @@ export default function AdminPage() {
 
             {/* Right: Quick actions & User */}
             <div className="flex items-center gap-2.5">
+              {/* Founder SaaS Cockpit Link */}
+              <Link
+                href="/admin/super-admin"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#EA580C] to-[#C2410C] hover:from-[#C2410C] hover:to-[#9A3412] text-white text-xs font-extrabold shadow-md shadow-[#EA580C]/25 transition-all hover:scale-105 border border-[#EA580C]/40"
+                title="Accéder au Cockpit Fondateur / Super Admin"
+              >
+                <Crown className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                <span className="hidden sm:inline">Espace Fondateur SaaS</span>
+                <span className="sm:hidden">Fondateur</span>
+              </Link>
+
               {/* Direct Link to Live Customer Menu */}
               <Link
                 href={`/${restaurant?.slug || selectedRestaurantSlug}`}
