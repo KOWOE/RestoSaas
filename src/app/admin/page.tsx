@@ -302,6 +302,17 @@ export default function AdminPage() {
     }
   }
 
+  const handleInstantDemoLogin = () => {
+    login({
+      id: 'user-admin-demo',
+      email: 'admin@restaurant.com',
+      name: 'Chef Malik (Gérant Démo)',
+      role: 'admin',
+      restaurantId: 'resto-1'
+    })
+    toast.success('🚀 Bienvenue dans le Cockpit Gérant en Mode Démo !')
+  }
+
   const fillDemoCredentials = () => {
     setLoginEmail('admin@restaurant.com')
     setLoginPassword('admin123')
@@ -570,25 +581,44 @@ export default function AdminPage() {
               </p>
             </div>
 
-            {/* Demo Helper Banner */}
-            <div className="p-3.5 bg-[#FFF7ED] border border-[#EA580C]/30 rounded-2xl space-y-2">
+            {/* Demo Helper Banner with 1-Click Instant Access */}
+            <div className="p-4 bg-gradient-to-br from-[#FFF7ED] to-[#FFEDD5] border-2 border-[#EA580C]/30 rounded-2xl space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-[#EA580C] flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4" /> Mode Démo Essai
+                <span className="text-xs font-black text-[#EA580C] flex items-center gap-1.5 uppercase tracking-wide">
+                  <Sparkles className="w-4 h-4 text-[#EA580C]" /> Espace Démo Publique
                 </span>
-                <Button
-                  size="sm"
-                  variant="outline"
+                <Badge className="bg-amber-500 text-white text-[9px] font-black uppercase px-2 py-0.5">
+                  Accès Libre
+                </Badge>
+              </div>
+
+              <Button
+                type="button"
+                onClick={handleInstantDemoLogin}
+                className="w-full h-11 bg-gradient-to-r from-amber-500 to-[#EA580C] hover:from-amber-600 hover:to-[#C2410C] text-white font-extrabold text-xs rounded-xl shadow-md shadow-amber-500/20 transition-all hover:scale-[1.01] flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-4 h-4 text-white animate-spin" style={{ animationDuration: '4s' }} />
+                <span>Explorer le Cockpit en Mode Démo (1-Clic)</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Button>
+
+              <div className="pt-1 flex items-center justify-between text-[11px] text-[#78716C] border-t border-[#EA580C]/20">
+                <span>Compte démo : <strong className="text-[#1C1917]">admin@restaurant.com</strong></span>
+                <button
+                  type="button"
                   onClick={fillDemoCredentials}
-                  className="h-6 px-2.5 text-[10px] font-extrabold bg-white border-[#EA580C]/40 text-[#EA580C] hover:bg-[#EA580C] hover:text-white rounded-lg transition-colors"
+                  className="text-[#EA580C] font-bold hover:underline"
                 >
-                  Remplir automatiquement
-                </Button>
+                  Remplir
+                </button>
               </div>
-              <div className="text-[11px] font-mono text-[#78716C] space-y-0.5">
-                <div>Email : <span className="font-bold text-[#1C1917]">admin@restaurant.com</span></div>
-                <div>Pass : <span className="font-bold text-[#1C1917]">admin123</span></div>
-              </div>
+            </div>
+
+            <div className="relative flex items-center justify-center">
+              <div className="border-t border-[#FDE8CD] w-full" />
+              <span className="bg-white px-3 text-[11px] font-bold text-[#A8A29E] uppercase tracking-wider absolute">
+                ou connexion gérant
+              </span>
             </div>
 
             {/* Form */}
@@ -689,11 +719,12 @@ export default function AdminPage() {
                     <span className="font-extrabold text-base text-white font-heading">
                       RestoSaas <span className="text-[#EA580C]">Cockpit</span>
                     </span>
-                    <Badge className="bg-[#16A34A] text-white text-[10px] font-bold px-2 py-0.2 border-0 rounded-full">
-                      En Ligne
+                    <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                      Espace Démo Gérant
                     </Badge>
                   </div>
-                  <p className="text-[11px] text-[#A8A29E]">Espace d&apos;Administration Gérant</p>
+                  <p className="text-[11px] text-[#A8A29E]">Cockpit Gérant en Démonstration Interactive</p>
                 </div>
               </Link>
 
@@ -769,6 +800,27 @@ export default function AdminPage() {
           </div>
         </div>
       </header>
+
+      {/* 🌟 Mode Démo Top Bar Notification */}
+      <div className="bg-[#FFF7ED] border-b border-[#FDE8CD] px-4 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5 text-[#78716C]">
+          <span className="w-6 h-6 rounded-lg bg-[#EA580C]/10 text-[#EA580C] flex items-center justify-center font-bold flex-shrink-0">
+            <Sparkles className="w-3.5 h-3.5" />
+          </span>
+          <span>
+            <strong className="text-[#1C1917]">Cockpit Restaurateur en Mode Démo Interactive</strong> • Vous gérez actuellement l&apos;établissement <strong>« {restaurant?.name || 'Le Jardin Savoureux'} »</strong>. Vos actions (mise à jour des commandes, stocks, KDS cuisine) sont simulées en temps réel.
+          </span>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Link
+            href="/onboarding"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#EA580C] hover:bg-[#C2410C] text-white font-extrabold text-[11px] shadow-sm shadow-[#EA580C]/20 transition-all hover:scale-105"
+          >
+            <span>Créer mon restaurant officiel</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </div>
 
       {/* Main Admin Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex-1 w-full space-y-6">
