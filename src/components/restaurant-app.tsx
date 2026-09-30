@@ -552,13 +552,8 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
       return
     }
 
-    const computedMethod = paymentProvider === 'cash' 
-      ? 'cash' 
-      : (paymentProvider === 'card' ? 'card' : 'mobile_money')
-
-    const effectivePaymentPhone = paymentPhone.trim() 
-      ? (paymentPhone.startsWith('+') ? paymentPhone : `${countryCode}${paymentPhone.replace(/^0+/, '')}`) 
-      : customerInfo.phone
+    const computedMethod = 'sur_place'
+    const computedProvider = 'comptoir'
 
     setIsSubmittingCheckout(true)
     try {
@@ -570,7 +565,6 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
 
       let order: any = null
       let orderNumber = `ORD-${Date.now().toString(36).toUpperCase().substring(0, 8)}`
-      let checkoutUrl: string | null = null
       const fullNotes = orderType === 'delivery'
         ? `[Livraison: ${customerInfo.address.trim()}] ${customerInfo.notes.trim()}`.trim()
         : customerInfo.notes.trim()
@@ -595,8 +589,8 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
               notes: fullNotes,
               type: orderType,
               paymentMethod: computedMethod,
-              paymentProvider: paymentProvider,
-              paymentPhone: effectivePaymentPhone,
+              paymentProvider: computedProvider,
+              paymentPhone: customerInfo.phone,
               isDemo: isDemoMode,
             }),
           })
@@ -605,9 +599,6 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
           if (res.ok && data.id) {
             order = data
             orderNumber = order.orderNumber
-            if (!isDemoMode) {
-              checkoutUrl = data.checkoutUrl || null
-            }
           }
         } catch (err) {
           console.error('API Orders fetch error:', err)
@@ -635,29 +626,13 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
           customerPhone: customerInfo.phone,
           tableNumber: finalTableNumber,
           notes: fullNotes,
-          paymentStatus: (computedMethod === 'mobile_money' || computedMethod === 'card') ? 'paid' : 'pending',
+          paymentStatus: 'pending',
           paymentMethod: computedMethod,
           createdAt: new Date().toISOString()
         }
       }
 
-      const providerInfo = PAYMENT_PROVIDERS.find(p => p.id === paymentProvider)
-      const providerLabel = providerInfo ? `${providerInfo.iconName} ${providerInfo.name}` : 'Mobile Money'
-
-      // 2. Gestion Paiement : En mode DÉMO, pas de redirection Moneroo
-      if (isDemoMode) {
-        if (computedMethod === 'mobile_money' || computedMethod === 'card') {
-          toast.success(`🎉 Commande #${orderNumber} validée ! Règlement par ${providerLabel} simulé avec succès en Mode Démo 🔥`)
-        } else {
-          toast.success(`🎉 Commande #${orderNumber} enregistrée ! Règlement en espèces à la réception.`)
-        }
-      } else if (checkoutUrl) {
-        toast.success(`Commande validée ! Redirection sécurisée ${providerLabel}...`)
-        window.location.href = checkoutUrl
-        return
-      } else {
-        toast.success(`Commande #${orderNumber} créée avec succès (${providerLabel}) !`)
-      }
+      toast.success(`🎉 Commande #${orderNumber} validée et transmise en cuisine ! 🔥`)
 
       // 3. Vider le panier et basculer vers l'écran de suivi
       clearCart()
@@ -3423,42 +3398,40 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
 
       {/* Checkout Dialog */}
       <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-        <DialogContent className="max-w-md bg-white border-2 border-[#FDE8CD] rounded-3xl p-6 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-extrabold text-[#1C1917] flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-[#EA580C]" />
-              Finaliser la Commande
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#78716C]">
-              {restaurant?.serviceType === 'online'
-                ? 'Restaurant en ligne (Dark Kitchen) • Livraison & À emporter'
-                : 'Choisissez votre mode de commande et vos coordonnées'}
+        <DialogContent className="max-w-md bg-white border border-[#FDE8CD] rounded-3xl p-5 sm:p-6 shadow-2xl">
+          <DialogHeader className="pb-3 border-b border-[#FDE8CD]">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg sm:text-xl font-extrabold text-[#1C1917] flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-[#EA580C]" />
+                Finaliser la Commande
+              </DialogTitle>
+              <span className="text-base font-black text-[#EA580C] font-mono">
+                {formatCurrency(getTotal() * (1 + (restaurant?.taxRate || 0.18)), restaurant?.currency)}
+              </span>
+            </div>
+            <DialogDescription className="text-xs text-[#78716C] mt-0.5">
+              Renseignez vos informations pour transmettre la commande en cuisine
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 pt-1">
-            {(restaurant?.slug === 'le-jardin-savoureux' || restaurant?.id === 'demo-restaurant' || targetSlug === 'le-jardin-savoureux') && (
-              <div className="p-3 bg-[#FFF7ED] border border-[#EA580C]/30 rounded-2xl flex items-center gap-2.5 text-xs text-[#EA580C] font-semibold">
-                <Sparkles className="w-4 h-4 flex-shrink-0 text-[#EA580C]" />
-                <span>Mode Démo : Vous pouvez tester le passage de commande et les différents paiements sans aucun prélèvement ni redirection.</span>
-              </div>
-            )}
+          <div className="space-y-3.5 pt-2">
+            {/* Mode de commande (Pills) */}
             <div>
-              <Label className="font-bold text-xs text-[#1C1917] block mb-1.5">Mode de commande *</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <Label className="font-bold text-xs text-[#1C1917] block mb-1.5">Mode de commande</Label>
+              <div className="grid grid-cols-3 gap-2">
                 {restaurant?.serviceType !== 'online' && (
                   <Button
                     type="button"
                     variant={orderType === 'dine_in' ? 'default' : 'outline'}
                     className={cn(
-                      "rounded-xl py-5 text-xs font-bold transition-all",
+                      "rounded-xl h-10 text-xs font-bold transition-all",
                       orderType === 'dine_in'
-                        ? "bg-[#EA580C] hover:bg-[#C2410C] text-white shadow-md shadow-[#EA580C]/20"
+                        ? "bg-[#EA580C] hover:bg-[#C2410C] text-white shadow-xs"
                         : "border-[#FDE8CD] bg-white text-[#1C1917] hover:bg-[#FFF7ED]"
                     )}
                     onClick={() => setOrderType('dine_in')}
                   >
-                    <UtensilsCrossed className="w-3.5 h-3.5 mr-1.5" />
+                    <UtensilsCrossed className="w-3.5 h-3.5 mr-1" />
                     Sur place
                   </Button>
                 )}
@@ -3467,14 +3440,14 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
                   type="button"
                   variant={orderType === 'takeaway' ? 'default' : 'outline'}
                   className={cn(
-                    "rounded-xl py-5 text-xs font-bold transition-all",
+                    "rounded-xl h-10 text-xs font-bold transition-all",
                     orderType === 'takeaway'
-                      ? "bg-[#EA580C] hover:bg-[#C2410C] text-white shadow-md shadow-[#EA580C]/20"
+                      ? "bg-[#EA580C] hover:bg-[#C2410C] text-white shadow-xs"
                       : "border-[#FDE8CD] bg-white text-[#1C1917] hover:bg-[#FFF7ED]"
                   )}
                   onClick={() => setOrderType('takeaway')}
                 >
-                  <Package className="w-3.5 h-3.5 mr-1.5" />
+                  <Package className="w-3.5 h-3.5 mr-1" />
                   À emporter
                 </Button>
 
@@ -3482,28 +3455,28 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
                   type="button"
                   variant={orderType === 'delivery' ? 'default' : 'outline'}
                   className={cn(
-                    "rounded-xl py-5 text-xs font-bold transition-all",
+                    "rounded-xl h-10 text-xs font-bold transition-all",
                     orderType === 'delivery'
-                      ? "bg-[#EA580C] hover:bg-[#C2410C] text-white shadow-md shadow-[#EA580C]/20"
+                      ? "bg-[#EA580C] hover:bg-[#C2410C] text-white shadow-xs"
                       : "border-[#FDE8CD] bg-white text-[#1C1917] hover:bg-[#FFF7ED]"
                   )}
                   onClick={() => setOrderType('delivery')}
                 >
-                  <Truck className="w-3.5 h-3.5 mr-1.5" />
+                  <Truck className="w-3.5 h-3.5 mr-1" />
                   Livraison
                 </Button>
               </div>
             </div>
 
-            {/* Table Selector (Hidden if online or not dine_in) */}
+            {/* Table Selector (if dine_in) */}
             {orderType === 'dine_in' && restaurant?.serviceType !== 'online' && (
-              <div className="p-3 bg-[#FFF7ED] rounded-2xl border border-[#FDE8CD] space-y-1.5">
-                <Label className="font-bold text-xs text-[#1C1917] flex items-center gap-1.5">
-                  <QrCode className="w-3.5 h-3.5 text-[#EA580C]" /> Numéro de table *
+              <div className="p-2.5 bg-[#FFF7ED] rounded-2xl border border-[#FDE8CD] flex items-center justify-between gap-3">
+                <Label className="font-bold text-xs text-[#1C1917] flex items-center gap-1.5 whitespace-nowrap">
+                  <QrCode className="w-3.5 h-3.5 text-[#EA580C]" /> Numéro de table :
                 </Label>
                 <Select value={tableNumber || ''} onValueChange={setTable}>
-                  <SelectTrigger className="mt-1 bg-white border-2 border-[#FDE8CD] rounded-xl font-bold">
-                    <SelectValue placeholder="Sélectionnez une table" />
+                  <SelectTrigger className="w-36 h-9 bg-white border border-[#FDE8CD] rounded-xl font-bold text-xs">
+                    <SelectValue placeholder="Choisir table" />
                   </SelectTrigger>
                   <SelectContent>
                     {restaurant?.tables && restaurant.tables.length > 0 ? (
@@ -3524,107 +3497,83 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
               </div>
             )}
 
-            {/* Delivery Address (Shown when delivery selected) */}
+            {/* Delivery Address (if delivery) */}
             {orderType === 'delivery' && (
-              <div className="p-3 bg-[#FFF7ED] rounded-2xl border border-[#FDE8CD] space-y-1.5">
-                <Label htmlFor="deliveryAddress" className="font-bold text-xs text-[#1C1917] flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-[#EA580C]" /> Adresse / Quartier de livraison *
+              <div>
+                <Label htmlFor="deliveryAddress" className="font-bold text-xs text-[#1C1917] flex items-center gap-1.5 mb-1">
+                  <MapPin className="w-3.5 h-3.5 text-[#EA580C]" /> Adresse de livraison *
                 </Label>
                 <Input
                   id="deliveryAddress"
                   value={customerInfo.address}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
-                  placeholder="Ex: Cotonou, Haie Vive, Rue 310 / Indications..."
-                  className="bg-white border-[#FDE8CD] rounded-xl text-xs"
+                  placeholder="Ex: Quartier, Rue, Porte..."
+                  className="bg-white border-[#FDE8CD] rounded-xl text-xs h-9"
                 />
               </div>
             )}
 
-            <PaymentMethodSelector
-              selectedProvider={paymentProvider}
-              onSelectProvider={setPaymentProvider}
-              phoneNumber={paymentPhone || customerInfo.phone}
-              onPhoneChange={(val) => {
-                setPaymentPhone(val)
-                if (!customerInfo.phone) {
-                  setCustomerInfo(prev => ({ ...prev, phone: val }))
-                }
-              }}
-              countryCode={countryCode}
-              onCountryCodeChange={setCountryCode}
-              allowCash={true}
-              currency={restaurant?.currency}
-              amount={getTotal() * (1 + (restaurant?.taxRate || 0.18))}
-            />
-
-            <div className="grid grid-cols-2 gap-3">
+            {/* Coordonnées Client (Nom + WhatsApp côte à côte) */}
+            <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <Label htmlFor="name" className="text-xs font-bold text-[#1C1917]">Nom *</Label>
+                <Label htmlFor="name" className="text-xs font-bold text-[#1C1917] block mb-1">Votre Nom *</Label>
                 <Input
                   id="name"
                   value={customerInfo.name}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                  placeholder="Votre nom"
-                  className="border-[#FDE8CD] rounded-xl mt-1 text-xs"
+                  placeholder="Ex: Koffi"
+                  className="border-[#FDE8CD] rounded-xl text-xs h-9"
                 />
               </div>
               <div>
-                <Label htmlFor="phone" className="text-xs font-bold text-[#1C1917]">WhatsApp / Tél *</Label>
+                <Label htmlFor="phone" className="text-xs font-bold text-[#1C1917] block mb-1">WhatsApp / Tél *</Label>
                 <Input
                   id="phone"
                   value={customerInfo.phone}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
                   placeholder="+229 97 00 00 00"
-                  className="border-[#FDE8CD] rounded-xl mt-1 text-xs font-mono"
+                  className="border-[#FDE8CD] rounded-xl text-xs font-mono h-9"
                 />
               </div>
             </div>
 
+            {/* Notes pour la cuisine */}
             <div>
-              <Label htmlFor="notes" className="text-xs font-bold text-[#1C1917]">Notes (optionnel)</Label>
-              <Textarea
+              <Label htmlFor="notes" className="text-xs font-bold text-[#78716C] block mb-1">Notes pour la cuisine (optionnel)</Label>
+              <Input
                 id="notes"
                 value={customerInfo.notes}
                 onChange={(e) => setCustomerInfo({ ...customerInfo, notes: e.target.value })}
-                placeholder="Instructions spéciales pour la cuisine..."
-                rows={2}
-                className="border-[#FDE8CD] rounded-xl mt-1 text-xs"
+                placeholder="Ex: Sans oignon, sauce à part..."
+                className="border-[#FDE8CD] rounded-xl text-xs h-9"
               />
             </div>
 
-            <Separator className="bg-[#FDE8CD]" />
-
-            <div className="flex justify-between font-extrabold text-base text-[#1C1917]">
-              <span>Total à régler</span>
-              <span className="text-[#EA580C] font-mono text-lg">
-                {formatCurrency(getTotal() * (1 + (restaurant?.taxRate || 0.18)), restaurant?.currency)}
-              </span>
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            {/* Action Buttons */}
+            <div className="pt-2 flex items-center gap-2">
               <Button
                 variant="outline"
                 onClick={() => setCheckoutOpen(false)}
                 disabled={isSubmittingCheckout}
-                className="border-[#FDE8CD] rounded-xl text-xs font-bold"
+                className="flex-1 h-11 border-[#FDE8CD] rounded-xl text-xs font-bold"
               >
                 Annuler
               </Button>
               <Button
-                className="bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-xl text-xs font-extrabold px-6 shadow-md shadow-[#EA580C]/20"
+                className="flex-[2] h-11 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-xl text-xs font-extrabold shadow-md shadow-[#EA580C]/20"
                 onClick={handleCheckout}
                 disabled={!customerInfo.name.trim() || !customerInfo.phone.trim() || isSubmittingCheckout}
               >
                 {isSubmittingCheckout ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                    En cours...
+                    Envoi en cuisine...
                   </>
                 ) : (
-                  'Confirmer'
+                  'Confirmer & Envoyer en Cuisine 🔥'
                 )}
               </Button>
-            </DialogFooter>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
