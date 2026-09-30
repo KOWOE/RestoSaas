@@ -1144,20 +1144,15 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
                 </motion.button>
               )}
 
-              {/* Discrete Manager Portal Access Button */}
-              <button
-                onClick={handleDashboardAccess}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-2xl border transition-all shadow-xs",
-                  viewMode === 'dashboard'
-                    ? "bg-[#1C1917] text-white border-[#1C1917]"
-                    : "bg-white text-[#78716C] hover:text-[#EA580C] hover:bg-[#FFF7ED] border-[#FDE8CD]"
-                )}
-                title="Accès réservé au Gérant & Cuisine"
+              {/* Direct Link to Dedicated Admin Cockpit Portal */}
+              <Link
+                href="/admin"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-2xl border transition-all shadow-xs bg-white text-[#78716C] hover:text-[#EA580C] hover:bg-[#FFF7ED] border-[#FDE8CD]"
+                title="Accès réservé au Cockpit Gérant & Cuisine"
               >
                 <Lock className="w-3.5 h-3.5 text-[#EA580C]" />
                 <span className="hidden md:inline">Espace Gérant</span>
-              </button>
+              </Link>
 
               {/* User info or logout button if logged in */}
               {isAuthenticated && user && (

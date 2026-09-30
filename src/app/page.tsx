@@ -47,6 +47,7 @@ import {
   Menu,
   X,
   Crown,
+  Lock,
   MessageSquarePlus,
   Send,
   Loader2,
@@ -347,6 +348,15 @@ export default function LandingPage() {
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Direct Link to Manager / Admin Portal */}
+            <Link
+              href="/admin"
+              className="hidden md:inline-flex items-center justify-center px-3.5 py-2 text-xs font-bold text-[#1C1917] hover:text-[#EA580C] bg-white hover:bg-[#FFF7ED] border border-[#FDE8CD] rounded-full transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Lock className="w-3.5 h-3.5 mr-1.5 text-[#EA580C]" />
+              Espace Gérant
+            </Link>
+
             {/* Button to directly open Review Modal */}
             <button
               onClick={() => setReviewModalOpen(true)}
@@ -425,6 +435,13 @@ export default function LandingPage() {
               </nav>
 
               <div className="pt-2 border-t border-[#FDE8CD] flex flex-col gap-2">
+                <Link
+                  href="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full py-2.5 text-center text-sm font-bold bg-[#1C1917] text-white rounded-2xl flex items-center justify-center gap-2 shadow-xs"
+                >
+                  <Lock className="w-4 h-4 text-[#EA580C]" /> Accès Espace Gérant
+                </Link>
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false)
