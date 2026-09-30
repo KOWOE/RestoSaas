@@ -175,6 +175,15 @@ export default function SouscrirePage() {
       const createdRestaurant = data.restaurant
       setCreatedSlug(createdRestaurant.slug)
 
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(`zagoor_restaurant_${createdRestaurant.slug}`, JSON.stringify(createdRestaurant))
+          localStorage.setItem('zagoor_last_created_restaurant', JSON.stringify(createdRestaurant))
+        } catch (e) {
+          console.warn('localStorage save warning:', e)
+        }
+      }
+
       // 2. Initialisation du paiement auprès de la passerelle Moneroo / FedaPay
       const returnUrl = `${window.location.origin}/success?type=subscription&restaurantId=${createdRestaurant.id}&slug=${createdRestaurant.slug}&amount=${totalBilledAmount}&plan=${isAnnual ? 'annual' : 'monthly'}`
 

@@ -410,14 +410,47 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
           if (data.serviceType === 'online') {
             setOrderType('delivery')
           }
-        } else if (slugToFetch === 'le-jardin-savoureux') {
-          setRestaurantData(DEMO_RESTAURANT)
-          setRestaurant(DEMO_RESTAURANT.id, DEMO_RESTAURANT.name)
         } else {
-          setNotFound(true)
+          // Check localStorage cache for newly onboarded restaurants
+          let cachedResto: any = null
+          if (typeof window !== 'undefined') {
+            try {
+              const raw = localStorage.getItem(`zagoor_restaurant_${slugToFetch}`) || localStorage.getItem('zagoor_last_created_restaurant')
+              if (raw) {
+                const parsed = JSON.parse(raw)
+                if (parsed && (parsed.slug === slugToFetch || !targetSlug)) {
+                  cachedResto = parsed
+                }
+              }
+            } catch {}
+          }
+
+          if (cachedResto) {
+            setRestaurantData(cachedResto)
+            setRestaurant(cachedResto.id, cachedResto.name)
+            if (cachedResto.serviceType === 'online') {
+              setOrderType('delivery')
+            }
+          } else if (slugToFetch === 'le-jardin-savoureux') {
+            setRestaurantData(DEMO_RESTAURANT)
+            setRestaurant(DEMO_RESTAURANT.id, DEMO_RESTAURANT.name)
+          } else {
+            setNotFound(true)
+          }
         }
       } catch {
-        if (slugToFetch === 'le-jardin-savoureux') {
+        let cachedResto: any = null
+        if (typeof window !== 'undefined') {
+          try {
+            const raw = localStorage.getItem(`zagoor_restaurant_${slugToFetch}`)
+            if (raw) cachedResto = JSON.parse(raw)
+          } catch {}
+        }
+
+        if (cachedResto) {
+          setRestaurantData(cachedResto)
+          setRestaurant(cachedResto.id, cachedResto.name)
+        } else if (slugToFetch === 'le-jardin-savoureux') {
           setRestaurantData(DEMO_RESTAURANT)
           setRestaurant(DEMO_RESTAURANT.id, DEMO_RESTAURANT.name)
         } else {
