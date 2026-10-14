@@ -6,7 +6,7 @@
     "dev": "next dev -p 3000",
     "build": "next build --webpack && node -e \"const fs=require('fs'); if(fs.existsSync('.next/static') && fs.existsSync('.next/standalone')) { fs.cpSync('.next/static', '.next/standalone/.next/static', {recursive:true, force:true}); fs.cpSync('public', '.next/standalone/public', {recursive:true, force:true}); }\"",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
-    "vercel-build": "node scripts/check-prod-env.mjs && prisma generate && prisma db push --skip-generate && npm run build",
+    "vercel-build": "node scripts/vercel-build.mjs",
     "check:env": "node scripts/check-prod-env.mjs",
     "lint": "eslint .",
     "db:push": "prisma db push",

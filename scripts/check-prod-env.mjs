@@ -31,17 +31,35 @@ const required = [
 // En production stricte : pas de valeurs par défaut pour l'admin bootstrap
 const requiredInProd = ['ADMIN_EMAIL', 'ADMIN_PASSWORD']
 
-const missing = required.filter((k) => !process.env[k])
-if (isProd) {
-  missing.push(...requiredInProd.filter((k) => !process.env[k]))
+const requiredAll = isProd ? [...required, ...requiredInProd] : required
+const missing = requiredAll.filter((k) => !process.env[k])
+
+console.log("\n📋 État des variables d'environnement :")
+for (const k of requiredAll) {
+  const ok = Boolean(process.env[k])
+  console.log(`   ${ok ? '✅' : '❌'} ${k}${!ok ? '   ← MANQUANTE' : ''}`)
 }
 
 if (missing.length > 0) {
   console.error('\n⛔ Configuration incomplète — variables manquantes :')
   for (const k of missing) console.error(`   • ${k}`)
   console.error('\n   → Vercel : Project → Settings → Environment Variables')
+  console.error('     (cocher l\'environnement « Production », puis Redeploy)')
   console.error('   → Serveur : ./scripts/setup-env.sh (ou éditer .env)')
   console.error('   → Modèle  : .env.example\n')
+  process.exit(1)
+}
+
+// Diagnostic ciblé DATABASE_URL (erreur classique Supabase)
+const dbUrl = process.env.DATABASE_URL || ''
+if (dbUrl.startsWith('https://')) {
+  console.error('\n⛔ DATABASE_URL est une URL de dashboard Supabase (https://…).')
+  console.error("   Il faut l'URI PostgreSQL : Supabase → Project Settings → Database")
+  console.error('   → Connection string → URI → mode « Session » → postgresql://…\n')
+  process.exit(1)
+}
+if (dbUrl && !dbUrl.startsWith('postgresql://') && !dbUrl.startsWith('postgres://')) {
+  console.error('\n⛔ DATABASE_URL doit commencer par postgresql://\n')
   process.exit(1)
 }
 
