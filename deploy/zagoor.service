@@ -1,0 +1,43 @@
+# Service systemd — Zagoor / RestoSaas
+# 1. sudo cp deploy/zagoor.service /etc/systemd/system/
+# 2. Ajuster User= et WorkingDirectory= si besoin
+# 3. sudo systemctl daemon-reload && sudo systemctl enable --now zagoor
+
+[Unit]
+Description=Zagoor RestoSaas - Menu digital & commandes
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/restosaas
+
+# Variables d'environnement SECRÈTES : fichier local chmod 600, jamais dans Git
+EnvironmentFile=/opt/restosaas/.env
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+
+# Le build "standalone" de Next.js (npm run build) copie les assets nécessaires
+ExecStart=/usr/bin/node .next/standalone/server.js
+
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+# Durcissement
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/restosaas/prisma /opt/restosaas/server.log
+
+# Logs journal
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=zagoor
+
+[Install]
+WantedBy=multi-user.target
