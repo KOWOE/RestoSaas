@@ -1,5 +1,14 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { onboardingSchema } from '@/lib/validation'
+import { getClientKey, rateLimit } from '@/lib/rate-limit'
+import { hashPassword } from '@/lib/auth'
+import crypto from 'crypto'
+
+/** Mot de passe temporaire lisible, remis une seule fois au propriétaire. */
+function generateTempPassword(): string {
+  return 'ZGR-' + crypto.randomBytes(4).toString('hex').toUpperCase()
+}
 
 // Starter dishes templates according to establishment type
 const STARTER_TEMPLATES: Record<string, { category: string; icon: string; products: { name: string; price: number; description: string; image: string; calories?: number }[] }[]> = {
@@ -86,7 +95,23 @@ const STARTER_TEMPLATES: Record<string, { category: string; icon: string; produc
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    // 5 souscriptions / heure / IP (anti-spam de création de tenants)
+    const limit = rateLimit(getClientKey(request, 'onboarding'), 5, 60 * 60_000)
+    if (!limit.ok) {
+      return NextResponse.json(
+        { error: 'Trop de créations de restaurant. Réessayez plus tard.' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } }
+      )
+    }
+
+    const body = await request.json().catch(() => null)
+    const parsed = onboardingSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Formulaire invalide', details: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`) },
+        { status: 400 }
+      )
+    }
     const {
       restaurantName,
       cuisineType = 'gastronomique',
@@ -103,16 +128,16 @@ export async function POST(request: NextRequest) {
       paymentMethod = 'mobile_money',
       paymentProvider = 'Wave / MTN / Moov',
       paymentPhone
-    } = body
-
-    if (!restaurantName || !ownerName || !email) {
-      return NextResponse.json({ error: 'Champs obligatoires manquants (nom, propriétaire, email).' }, { status: 400 })
-    }
+    } = parsed.data
 
     // Default order modes according to serviceType
     const resolvedOrderModes = orderModes || (
       serviceType === 'online' ? 'takeaway,delivery' : 'dine_in,takeaway,delivery'
     )
+
+    // Mot de passe temporaire du propriétaire (hashé en base, remis une fois)
+    const tempPassword = generateTempPassword()
+    const hashedPassword = hashPassword(tempPassword)
 
     // Generate unique slug
     let baseSlug = restaurantName
@@ -152,6 +177,9 @@ export async function POST(request: NextRequest) {
           plan: 'pro',
           serviceType,
           orderModes: resolvedOrderModes,
+          // Inactif tant que l'abonnement n'est pas payé — activation par
+          // webhook Moneroo / verification paiement / super-admin.
+          isActive: false,
           logo: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&h=200&fit=crop',
           banner: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&h=400&fit=crop',
         }
@@ -165,7 +193,8 @@ export async function POST(request: NextRequest) {
           data: {
             name: ownerName,
             restaurantId: createdRestaurant.id,
-            role: 'restaurant_owner'
+            role: 'restaurant_owner',
+            password: hashedPassword
           }
         }).catch(() => null)
       } else {
@@ -174,7 +203,8 @@ export async function POST(request: NextRequest) {
             email,
             name: ownerName,
             role: 'restaurant_owner',
-            restaurantId: createdRestaurant.id
+            restaurantId: createdRestaurant.id,
+            password: hashedPassword
           }
         }).catch(() => null)
       }
@@ -274,6 +304,7 @@ export async function POST(request: NextRequest) {
         plan: 'pro',
         serviceType,
         orderModes: resolvedOrderModes,
+        isActive: false,
         logo: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&h=200&fit=crop',
         banner: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&h=400&fit=crop',
         categories: builtCategories,
@@ -290,6 +321,7 @@ export async function POST(request: NextRequest) {
         address: createdRestaurant.address,
         currency: createdRestaurant.currency,
         plan: createdRestaurant.plan,
+        isActive: createdRestaurant.isActive ?? false,
         serviceType: createdRestaurant.serviceType,
         orderModes: createdRestaurant.orderModes,
         categories: createdRestaurant.categories || [],
@@ -297,7 +329,12 @@ export async function POST(request: NextRequest) {
         planPrice,
         billingCycle
       },
-      message: 'Restaurant créé et activé avec succès !'
+      message: 'Restaurant créé ! Finalisez le paiement de l\'abonnement pour activer votre espace.',
+      // Identifiants remis UNE SEULE FOIS (non stockés en clair côté serveur)
+      credentials: {
+        email,
+        tempPassword
+      }
     })
   } catch (error) {
     console.error('Erreur création restaurant onboarding:', error)

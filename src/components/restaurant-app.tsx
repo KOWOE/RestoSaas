@@ -398,7 +398,7 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
         if (!res.ok || data?.error || !data?.id) {
           // If default/demo slug or fetch failed, attempt seed
           if (slugToFetch === 'le-jardin-savoureux') {
-            await fetch('/api/seed')
+            await fetch('/api/seed', { method: 'POST' }).catch(() => null)
             res = await fetch('/api/restaurants?slug=le-jardin-savoureux')
             data = await res.json()
           }
@@ -626,7 +626,6 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
               paymentMethod: computedMethod,
               paymentProvider: computedProvider,
               paymentPhone: customerInfo.phone,
-              isDemo: isDemoMode,
             }),
           })
 
@@ -634,14 +633,22 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
           if (res.ok && data.id) {
             order = data
             orderNumber = order.orderNumber
+          } else if (!isDemoMode) {
+            // Echec reel : on n'invente PAS de commande locale fantome
+            toast.error(data?.error || "La commande n'a pas pu etre enregistree. Reessayez.")
+            return
           }
         } catch (err) {
           console.error('API Orders fetch error:', err)
+          if (!isDemoMode) {
+            toast.error('Erreur de communication avec le serveur. La commande n\'a pas ete enregistree.')
+            return
+          }
         }
       }
 
-      // Si mode démo local ou repli
-      if (!order) {
+      // Repli local UNIQUEMENT en mode demo explicite
+      if (!order && isDemoMode) {
         order = {
           id: `order-${Date.now()}`,
           orderNumber,
@@ -897,6 +904,7 @@ export default function RestaurantApp({ targetSlug }: RestaurantAppProps = {}) {
 
   // Handle logout
   const handleLogout = () => {
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
     logout()
     setViewMode('menu')
     toast.success('Déconnexion réussie')

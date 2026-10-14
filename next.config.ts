@@ -12,14 +12,38 @@ const withPWA = withPWAInit({
   },
 });
 
+// Headers de sécurité appliqués à toutes les réponses
+const securityHeaders = [
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(self), payment=(self)",
+  },
+  { key: "X-DNS-Prefetch-Control", value: "on" },
+  // HSTS : activer quand le site est servi en HTTPS derrière Caddy
+  ...(process.env.NODE_ENV === "production"
+    ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }]
+    : []),
+];
+
 const nextConfig: NextConfig = {
   output: "standalone",
   turbopack: {},
-  /* config options here */
+  // Ne plus ignorer les erreurs TypeScript au build (garde-fou qualité)
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
-  reactStrictMode: false,
+  reactStrictMode: true,
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: securityHeaders,
+      },
+    ];
+  },
   images: {
     unoptimized: true,
     remotePatterns: [

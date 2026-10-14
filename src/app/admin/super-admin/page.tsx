@@ -206,7 +206,7 @@ const DEFAULT_RESTAURANTS: RestaurantTenant[] = [
   }
 ]
 
-export default function SuperAdminDashboard() {
+function SuperAdminDashboard({ onLogout }: { onLogout?: () => void }) {
   const [activeTab, setActiveTab] = useState<'tenants' | 'transactions' | 'analytics' | 'pricing' | 'settings'>('tenants')
   const [restaurants, setRestaurants] = useState<RestaurantTenant[]>(DEFAULT_RESTAURANTS)
   const [transactions, setTransactions] = useState<SaasTransaction[]>([])
@@ -479,6 +479,14 @@ export default function SuperAdminDashboard() {
               <span>Landing Page</span>
               <ExternalLink className="w-3.5 h-3.5 text-[#78716C]" />
             </Link>
+
+            <button
+              onClick={onLogout}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-600/90 hover:bg-red-700 text-white font-bold transition-all"
+            >
+              <Power className="w-3.5 h-3.5" />
+              <span>Se déconnecter</span>
+            </button>
           </div>
 
         </div>
@@ -1149,4 +1157,138 @@ export default function SuperAdminDashboard() {
 
     </div>
   )
+}
+
+// ============================================================================
+// Porte d'accès : le back-office fondateur exige une session super_admin
+// (vérifiée côté serveur — les appels API refusent les non-super_admin)
+// ============================================================================
+export default function SuperAdminPage() {
+  const [sessionUser, setSessionUser] = useState<{ id: string; role: string; name: string } | null>(null)
+  const [checked, setChecked] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  // Restaure la session depuis le cookie httpOnly
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/auth/me')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && d?.user) setSessionUser(d.user)
+      })
+      .catch(() => null)
+      .finally(() => {
+        if (!cancelled) setChecked(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+      if (res.ok && data?.user && data.user.role === 'super_admin') {
+        setSessionUser(data.user)
+        toast.success('Bienvenue dans le cockpit fondateur.')
+      } else if (res.ok && data?.user) {
+        setError('Ce compte n\'a pas les droits super administrateur.')
+      } else {
+        setError(data?.error || 'Email ou mot de passe incorrect')
+      }
+    } catch {
+      setError('Erreur de communication avec le serveur')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLogout = () => {
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
+    setSessionUser(null)
+  }
+
+  if (!checked) {
+    return (
+      <div className="min-h-screen bg-[#FFFBF5] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#EA580C]" />
+      </div>
+    )
+  }
+
+  if (!sessionUser || sessionUser.role !== 'super_admin') {
+    return (
+      <div className="min-h-screen bg-[#FFFBF5] flex items-center justify-center px-4">
+        <Card className="w-full max-w-md border-[#FDE8CD] rounded-2xl">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-[#EA580C]/10 flex items-center justify-center mb-2">
+              <Lock className="w-6 h-6 text-[#EA580C]" />
+            </div>
+            <CardTitle className="text-xl font-extrabold text-[#1C1917]">
+              Espace Fondateur Zagoor
+            </CardTitle>
+            <p className="text-sm text-[#78716C] font-medium">
+              Accès réservé au super administrateur de la plateforme.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="sa-email">Email</Label>
+                <Input
+                  id="sa-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@restaurant.com"
+                  required
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="sa-password">Mot de passe</Label>
+                <Input
+                  id="sa-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="rounded-xl"
+                />
+              </div>
+              {error && (
+                <p className="text-xs font-semibold text-red-600">{error}</p>
+              )}
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 rounded-xl bg-[#EA580C] hover:bg-[#C2410C] text-white font-bold"
+              >
+                {loading ? 'Connexion...' : 'Se connecter'}
+              </Button>
+            </form>
+            <div className="mt-4 text-center">
+              <Link href="/" className="text-xs font-semibold text-[#78716C] hover:text-[#EA580C]">
+                ← Retour au site public
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return <SuperAdminDashboard onLogout={handleLogout} />
 }

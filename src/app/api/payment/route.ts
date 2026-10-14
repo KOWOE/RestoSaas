@@ -1,53 +1,85 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { paymentInitSchema } from '@/lib/validation'
+import { getClientKey, rateLimit } from '@/lib/rate-limit'
 
-interface PaymentInitRequestBody {
-  amount: number
-  currency?: string
-  description?: string
-  customer?: {
-    email?: string
-    first_name?: string
-    last_name?: string
-    name?: string
-    phone?: string
+// ============================================================================
+// POST /api/payment — initialisation d'un paiement Moneroo / FedaPay
+//   - clé secrète UNIQUEMENT via variable d'environnement (aucun fallback en dur)
+//   - montant validé par Zod, return_url restreint au domaine de l'app
+// ============================================================================
+
+function isAllowedReturnUrl(returnUrl: string, requestOrigin: string | null): boolean {
+  try {
+    const url = new URL(returnUrl)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    const allowedHosts = new Set<string>()
+    if (requestOrigin) {
+      try { allowedHosts.add(new URL(requestOrigin).host) } catch { /* ignore */ }
+    }
+    if (appUrl) {
+      try { allowedHosts.add(new URL(appUrl).host) } catch { /* ignore */ }
+    }
+    allowedHosts.add('localhost:3000')
+    allowedHosts.add('127.0.0.1:3000')
+    return allowedHosts.has(url.host)
+  } catch {
+    return false
   }
-  orderId?: string
-  restaurantId?: string
-  type?: 'subscription' | 'order'
-  returnUrl?: string
-  metadata?: Record<string, unknown>
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body: PaymentInitRequestBody = await request.json()
-    const { 
-      amount, 
-      currency = 'XOF', 
-      description, 
-      customer, 
-      orderId, 
-      restaurantId, 
+    // 20 initialisations / 10 min / IP
+    const limit = rateLimit(getClientKey(request, 'payment:init'), 20, 10 * 60_000)
+    if (!limit.ok) {
+      return NextResponse.json(
+        { error: 'Trop de tentatives de paiement. Réessayez plus tard.' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } }
+      )
+    }
+
+    const rawBody = await request.json().catch(() => null)
+    const parsed = paymentInitSchema.safeParse(rawBody)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Demande de paiement invalide', details: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`) },
+        { status: 400 }
+      )
+    }
+
+    const {
+      amount,
+      currency = 'XOF',
+      description,
+      customer,
+      orderId,
+      restaurantId,
       type = 'order',
       returnUrl,
       metadata = {}
-    } = body
-
-    if (!amount || amount <= 0) {
-      return NextResponse.json({ error: 'Le montant du paiement est invalide.' }, { status: 400 })
-    }
+    } = parsed.data
 
     const MONEROO_URL = process.env.MONEROO_URL || 'https://api.moneroo.io/v1/payments/initialize'
-    const MONEROO_SECRET = process.env.MONEROO_SECRET_KEY || process.env.MONEROO_SECRET || 'pvk_sandbox_xd3hbu|01KYSKY0QD9EM65FAXFVK2ZKN6'
-    
+    const MONEROO_SECRET = process.env.MONEROO_SECRET_KEY || process.env.MONEROO_SECRET
+
+    // ⚠️ Plus aucun fallback en dur : sans clé configurée, on refuse proprement.
+    if (!MONEROO_SECRET) {
+      console.error('[Payment API] MONEROO_SECRET_KEY non configuré.')
+      return NextResponse.json(
+        { error: 'Passerelle de paiement non configurée. Contactez l\'administrateur.' },
+        { status: 503 }
+      )
+    }
+
     // Obtenir l'origine de la requête pour le return URL
     const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const defaultReturnUrl = `${origin}/success`
 
-    const isLiveKey = MONEROO_SECRET.startsWith('pvk_live_')
-    
-    // Dans Moneroo Live avec FedaPay, le XOF est géré directement en devise locale (ex: 5500 FCFA).
-    // En sandbox de test Moneroo, certaines devises demandent USD ou une conversion de base.
+    // return_url fourni par le client : doit pointer vers notre domaine
+    if (returnUrl && !isAllowedReturnUrl(returnUrl, request.headers.get('origin'))) {
+      return NextResponse.json({ error: 'returnUrl non autorisée.' }, { status: 400 })
+    }
+
     const finalCurrency = currency.toUpperCase()
     const finalAmount = Math.round(Number(amount))
 
@@ -97,39 +129,6 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errText = await response.text()
       console.error('[Payment API] Erreur Moneroo:', response.status, errText)
-      
-      // Fallback sandbox pour devises incompatibles en mode test si nécessaire
-      if (!isLiveKey && finalCurrency === 'XOF') {
-        console.log('[Payment API] Tentative de fallback sandbox USD...')
-        const fallbackAmount = Math.max(1, Math.round(finalAmount / 600))
-        const fallbackResponse = await fetch(MONEROO_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${MONEROO_SECRET}`,
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            ...payload,
-            amount: fallbackAmount,
-            currency: 'USD'
-          })
-        })
-
-        if (fallbackResponse.ok) {
-          const fallbackData = await fallbackResponse.json()
-          const checkoutUrl = fallbackData?.data?.checkout_url || fallbackData?.checkout_url || fallbackData?.data?.url || null
-          const paymentId = fallbackData?.data?.id || fallbackData?.id || null
-          return NextResponse.json({
-            success: true,
-            message: 'Paiement initié en sandbox',
-            checkoutUrl,
-            paymentId,
-            fullData: fallbackData
-          })
-        }
-      }
-
       return NextResponse.json({ 
         error: 'Échec lors de l\'initialisation du paiement avec Moneroo / FedaPay.', 
         details: errText 
@@ -143,9 +142,9 @@ export async function POST(request: NextRequest) {
     const paymentId = data?.data?.id || data?.id || null
 
     return NextResponse.json({ 
-      success: true,
-      message: 'Paiement initié avec succès',
-      checkoutUrl,
+      success: true, 
+      message: 'Paiement initié avec succès', 
+      checkoutUrl, 
       paymentId,
       fullData: data 
     })

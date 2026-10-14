@@ -237,25 +237,16 @@ export default function AdminPage() {
     }
     fetchRestaurants()
 
-    // Check if deep linked via query string ?restaurant=slug
+    // Deep link ?restaurant=slug : sélection uniquement, JAMAIS de connexion auto
+    // (l'authentification est vérifiée côté serveur via le cookie de session)
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       const requestedSlug = params.get('restaurant')
       if (requestedSlug) {
         setSelectedRestaurantSlug(requestedSlug)
-        if (!isAuthenticated) {
-          login({
-            id: 'super-admin-impersonate',
-            email: 'admin@restaurant.com',
-            name: 'Fondateur SaaS (Super Admin)',
-            role: 'super_admin',
-            restaurantId: requestedSlug
-          })
-          toast.success(`Accès au Cockpit de « ${requestedSlug} » synchronisé !`)
-        }
       }
     }
-  }, [isAuthenticated, login])
+  }, [])
 
   // Fetch current restaurant data and orders
   const fetchRestaurantData = async () => {
@@ -265,7 +256,7 @@ export default function AdminPage() {
       let data = await res.json()
 
       if (!res.ok || !data?.id) {
-        await fetch('/api/seed')
+        await fetch('/api/seed', { method: 'POST' }).catch(() => null)
         res = await fetch(`/api/restaurants?slug=${encodeURIComponent(selectedRestaurantSlug)}`)
         data = await res.json()
       }
@@ -838,7 +829,7 @@ export default function AdminPage() {
 
               {/* Logout Button */}
               <Button
-                onClick={logout}
+                onClick={() => { fetch('/api/auth/logout', { method: 'POST' }).catch(() => null); logout() }}
                 variant="ghost"
                 size="sm"
                 className="h-9 px-3 text-[#A8A29E] hover:text-white hover:bg-red-950/40 rounded-xl text-xs font-bold gap-1.5"

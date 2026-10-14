@@ -175,9 +175,14 @@ export default function SouscrirePage() {
       const createdRestaurant = data.restaurant
       setCreatedSlug(createdRestaurant.slug)
 
+      // Identifiants temporaires du propriétaire (remis une seule fois)
+      if (data.credentials?.tempPassword) {
+        toast.success(`Identifiants gérant : ${data.credentials.email} / ${data.credentials.tempPassword} — notez-les !`, { duration: 12000 })
+      }
+
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem(`zagoor_restaurant_${createdRestaurant.slug}`, JSON.stringify(createdRestaurant))
+          localStorage.setItem(`zagoor_restaurant_${createdRestaurant.slug}`, JSON.stringify({ ...createdRestaurant, credentials: data.credentials || null }))
           localStorage.setItem('zagoor_last_created_restaurant', JSON.stringify(createdRestaurant))
         } catch (e) {
           console.warn('localStorage save warning:', e)

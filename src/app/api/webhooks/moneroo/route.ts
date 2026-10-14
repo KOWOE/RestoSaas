@@ -2,25 +2,56 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import crypto from 'crypto'
 
+// ============================================================================
+// POST /api/webhooks/moneroo — webhooks Moneroo / FedaPay
+//   SÉCURISÉ EN FAIL-CLOSED :
+//   - signature HMAC-SHA256 exigée sur le corps brut (x-moneroo-signature)
+//   - signature absente ou invalide → 401, JAMAIS traitée
+//   - escape dev uniquement : WEBHOOK_ALLOW_UNSIGNED=true
+//   - idempotence : ne marque payé qu'une fois
+//   - vérification du montant avant marquage "paid"
+// ============================================================================
+
+function verifySignature(rawBody: string, signature: string | null, secret: string): boolean {
+  if (!signature || !secret) return false
+  const computed = crypto
+    .createHmac('sha256', secret)
+    .update(rawBody)
+    .digest('hex')
+  const a = Buffer.from(signature)
+  const b = Buffer.from(computed)
+  if (a.length !== b.length) return false
+  return crypto.timingSafeEqual(a, b)
+}
+
 export async function POST(request: NextRequest) {
   try {
     const rawBody = await request.text()
-    const signature = request.headers.get('x-moneroo-signature') || request.headers.get('x-signature')
-    const authHeader = request.headers.get('authorization')
-    const webhookSecret = process.env.MONEROO_WEBHOOK_SECRET || 'ih_01KYQX8F6XYP5482DCT1XSBEA7_3isfvogqqp5e_j4DvpIVxqaiz'
+    const signature =
+      request.headers.get('x-moneroo-signature') ||
+      request.headers.get('x-signature') ||
+      null
 
-    // Vérification de signature si fournie
-    if (signature && webhookSecret) {
-      const computedSignature = crypto
-        .createHmac('sha256', webhookSecret)
-        .update(rawBody)
-        .digest('hex')
+    const webhookSecret = process.env.MONEROO_WEBHOOK_SECRET
+    const allowUnsigned =
+      process.env.WEBHOOK_ALLOW_UNSIGNED === 'true' && process.env.NODE_ENV !== 'production'
 
-      if (signature !== computedSignature) {
-        console.warn('[Webhook Moneroo] Signature HMAC non correspondante. Traitement conditionnel autorisé.')
+    if (!webhookSecret) {
+      if (!allowUnsigned) {
+        console.error('[Webhook Moneroo] MONEROO_WEBHOOK_SECRET non configuré — webhooks rejetés.')
+        return NextResponse.json({ error: 'Webhook non configuré.' }, { status: 503 })
       }
-    } else if (authHeader && authHeader.includes(webhookSecret)) {
-      console.log('[Webhook Moneroo] Authentification par Bearer Secret confirmée.')
+      console.warn('[Webhook Moneroo] Traitement NON signé (développement uniquement).')
+    } else {
+      const authHeader = request.headers.get('authorization')
+      const bearerOk = authHeader?.includes(webhookSecret) ?? false
+      const signatureOk = verifySignature(rawBody, signature, webhookSecret)
+
+      if (!signatureOk && !bearerOk) {
+        // FAIL-CLOSED : signature absente ou invalide → rejet ferme
+        console.warn('[Webhook Moneroo] Signature absente ou invalide — événement rejeté.')
+        return NextResponse.json({ error: 'Signature invalide.' }, { status: 401 })
+      }
     }
 
     let payload: Record<string, any>
@@ -40,11 +71,12 @@ export async function POST(request: NextRequest) {
     const isSuccess = event === 'payment.success' || status === 'success' || status === 'completed' || status === 'approved'
     const metadata = paymentData?.metadata || {}
     const orderId = metadata?.orderId
-    const restaurantId = metadata?.restaurantId
+    // CORRECTION : les deux clés de métadonnées utilisées par le front
+    const restaurantId = metadata?.restaurantId || metadata?.onboardingRestaurantId || null
     const type = metadata?.type || (orderId ? 'order' : 'subscription')
 
     if (isSuccess) {
-      console.log(`[Webhook Moneroo] Paiement validé avec succès (${paymentData?.id || 'N/A'}) - Type: ${type}`)
+      console.log(`[Webhook Moneroo] Paiement validé (${paymentData?.id || 'N/A'}) - Type: ${type}`)
 
       // Traitement Commande Restaurant
       if (orderId) {
@@ -54,48 +86,75 @@ export async function POST(request: NextRequest) {
           })
 
           if (order) {
-            await db.order.update({
-              where: { id: orderId },
-              data: {
-                paymentStatus: 'paid',
-                status: order.status === 'pending' ? 'confirmed' : order.status
-              }
-            })
+            // Vérification du montant (tolérance sandbox : devise différente = log seulement)
+            const gatewayAmount = Number(paymentData?.amount)
+            const gatewayCurrency = typeof paymentData?.currency === 'object'
+              ? (paymentData?.currency?.code || 'XOF')
+              : (paymentData?.currency || 'XOF')
+            const orderCurrency = order.currency || 'XOF'
 
-            const existingPayment = await db.payment.findUnique({
-              where: { orderId }
-            })
+            if (
+              gatewayCurrency === orderCurrency &&
+              Number.isFinite(gatewayAmount) &&
+              Math.abs(gatewayAmount - order.total) > 1
+            ) {
+              console.warn(
+                `[Webhook Moneroo] Montant divergent commande ${orderId}: gateway=${gatewayAmount} commande=${order.total} — marquage refusé.`
+              )
+              return NextResponse.json(
+                { received: true, success: false, error: 'Montant divergent.' },
+                { status: 400 }
+              )
+            }
 
-            if (!existingPayment) {
-              await db.payment.create({
+            // Idempotence : déjà payé → ne rien faire
+            if (order.paymentStatus !== 'paid') {
+              await db.order.update({
+                where: { id: orderId },
                 data: {
-                  orderId,
-                  restaurantId: order.restaurantId,
-                  amount: Number(paymentData?.amount) || order.total,
-                  currency: typeof paymentData?.currency === 'object' ? (paymentData?.currency?.code || 'XOF') : (paymentData?.currency || 'XOF'),
-                  status: 'success',
-                  method: paymentData?.payment_method || 'mobile_money',
-                  transactionId: paymentData?.id || `WEBHOOK-${Date.now()}`,
-                  provider: 'Moneroo / FedaPay',
-                  phone: paymentData?.customer?.phone || null
+                  paymentStatus: 'paid',
+                  status: order.status === 'pending' ? 'confirmed' : order.status
                 }
               })
+
+              const existingPayment = await db.payment.findUnique({
+                where: { orderId }
+              })
+
+              if (!existingPayment) {
+                await db.payment.create({
+                  data: {
+                    orderId,
+                    restaurantId: order.restaurantId,
+                    amount: gatewayAmount || order.total,
+                    currency: gatewayCurrency,
+                    status: 'success',
+                    method: paymentData?.payment_method || 'mobile_money',
+                    transactionId: paymentData?.id || `WEBHOOK-${Date.now()}`,
+                    provider: 'Moneroo / FedaPay',
+                    phone: paymentData?.customer?.phone || null
+                  }
+                })
+              }
+              console.log(`[Webhook Moneroo] Commande ${orderId} mise à jour avec statut 'paid'`)
             }
-            console.log(`[Webhook Moneroo] Commande ${orderId} mise à jour avec statut 'paid'`)
           }
         } catch (dbErr) {
           console.error('[Webhook Moneroo] Erreur BDD mise à jour commande:', dbErr)
         }
       }
 
-      // Traitement Souscription SaaS Restaurant (Activation si onboarding data présente)
-      if (type === 'subscription' && metadata?.onboardingRestaurantId) {
+      // Activation SaaS Restaurant pour un abonnement payé
+      if (type === 'subscription' && restaurantId) {
         try {
           await db.restaurant.update({
-            where: { id: metadata.onboardingRestaurantId },
-            data: { isActive: true, plan: metadata?.plan || 'pro' }
+            where: { id: restaurantId },
+            data: {
+              isActive: true,
+              plan: ['basic', 'pro', 'premium'].includes(metadata?.plan) ? metadata.plan : 'pro'
+            }
           })
-          console.log(`[Webhook Moneroo] Restaurant ${metadata.onboardingRestaurantId} activé avec succès`)
+          console.log(`[Webhook Moneroo] Restaurant ${restaurantId} activé avec succès`)
         } catch (subErr) {
           console.error('[Webhook Moneroo] Erreur activation restaurant:', subErr)
         }
