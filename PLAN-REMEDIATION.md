@@ -70,10 +70,10 @@ Chaque phase est commitée séparément ; les éléments non réalisables dans c
 
 | # | Action | Responsable |
 |---|---|---|
-| 1 | **Révoquer/rotater les clés Moneroo** (présentes dans l'historique Git) et régénérer une clé webhook | Humain — console Moneroo |
+| 1 | **Révoquer/rotater les clés Moneroo** (présentes dans l'historique Git ET dans une conversation) et régénérer une clé webhook | Humain — console Moneroo |
 | 2 | Purger l'historique Git des secrets (BFG / repo neuf) | Humain — décision sur l'historique |
 | 3 | **`npm run db:push`** au prochain démarrage (les index ajoutés au schéma Prisma s'appliquent à la base) | Humain — 1 commande |
-| 4 | Migrer SQLite → PostgreSQL + `prisma migrate` versionné | Prochaine session (changement d'infra) |
+| 4 | ~~Migrer SQLite → PostgreSQL~~ ✅ Fait (schéma `postgresql`, guide Vercel, `vercel-build`) — restant : `prisma migrate` versionné | Fait / P2 |
 | 5 | Montants en entiers/centimes ou `Decimal` (changement de schéma + migration données) | Prochaine session |
 | 6 | Découpage des god-components, Server Components (SEO), TanStack Query | P2 — refonte progressive |
 | 7 | Tests automatisés (vitest/playwright) + CI GitHub Actions | P2 |
@@ -114,3 +114,14 @@ Chaque phase est commitée séparément ; les éléments non réalisables dans c
 | 17 | Tracking téléphone < 6 caractères | 400 | ✅ |
 
 > Note sandbox : le binaire d'exécution Prisma (`binaries.prisma.sh`) n'est pas téléchargeable depuis cet environnement ; les tests 15 et les flux CRUD en base sont couverts par le typecheck et la compilation. Sur une machine normale, `npm install` régénère le client et tout fonctionne.
+
+
+---
+
+## 🚀 Déploiement production (ajouté le 14/10 — hébergement : **Vercel**)
+
+- [x] `prisma/schema.prisma` → `provider = "postgresql"` (SQLite ne persiste pas sur Vercel)
+- [x] `npm run vercel-build` : vérif variables d'env (`scripts/check-prod-env.mjs`) → `prisma generate` → `prisma db push` → `npm run build`
+- [x] `DEPLOIEMENT-PRODUCTION.md` : procédure Vercel complète (Neon, env vars, webhook Moneroo, vérifications)
+- [x] `deploy/` : Caddyfile + service systemd (option VPS conservée)
+- [ ] **Humain** : créer la base Neon + renseigner les variables dans Vercel + webhook Moneroo (voir A1→A4)
