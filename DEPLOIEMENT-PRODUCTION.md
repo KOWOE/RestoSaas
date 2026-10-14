@@ -49,7 +49,7 @@ et *Preview* si vous voulez tester) :
 | `SESSION_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
 | `ADMIN_EMAIL` | email du super-admin (**obligatoire en prod**) |
 | `ADMIN_PASSWORD` | mot de passe fort (**obligatoire en prod**) |
-| `MONEROO_SECRET_KEY` | votre clé `pvk_…` |
+| `MONEROO_SECRET_KEY` **ou** `MONEROO_SECRET` | votre clé `pvk_…` — les deux noms sont acceptés par le code |
 | `MONEROO_WEBHOOK_URL` | `https://hooks.moneroo.io/ho_s5e1oxk8847i` |
 | `MONEROO_WEBHOOK_SECRET` | secret `ih_…` affiché avec le webhook (A4) |
 | `NEXT_PUBLIC_APP_URL` | `https://votre-projet.vercel.app` (ou domaine custom) |
