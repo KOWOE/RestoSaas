@@ -1,5 +1,15 @@
 import { NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
+import { reviewSchema } from '@/lib/validation'
+import { getClientKey, rateLimit } from '@/lib/rate-limit'
+
+// ============================================================================
+// /api/reviews — témoignages publics MODÉRÉS
+//   GET  : public
+//   POST : public mais validé, rate-limité, et NON vérifié par défaut
+//          (isVerified passe à true uniquement après modération)
+// ============================================================================
 
 // Default fallback reviews if db is empty
 const INITIAL_REVIEWS = [
@@ -62,14 +72,26 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { authorName, authorRole, restaurantName, city, rating, comment, avatar } = body
-
-    if (!authorName || !restaurantName || !comment) {
-      return NextResponse.json({ error: 'Champs obligatoires manquants' }, { status: 400 })
+    // 5 avis / heure / IP
+    const limit = rateLimit(getClientKey(req, 'reviews:post'), 5, 60 * 60_000)
+    if (!limit.ok) {
+      return NextResponse.json(
+        { error: 'Trop d\'avis envoyés. Réessayez plus tard.' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } }
+      )
     }
+
+    const body = await req.json().catch(() => null)
+    const parsed = reviewSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Avis invalide', details: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`) },
+        { status: 400 }
+      )
+    }
+    const { authorName, authorRole, restaurantName, city, rating, comment, avatar } = parsed.data
 
     const newReview = await db.review.create({
       data: {
@@ -77,10 +99,11 @@ export async function POST(req: Request) {
         authorRole: authorRole || 'Chef Cuisinier',
         restaurantName,
         city: city || 'Afrique de l\'Ouest',
-        rating: typeof rating === 'number' ? rating : 5,
+        rating: rating ?? 5,
         comment,
         avatar: avatar || 'https://images.unsplash.com/photo-1534528741775?w=120&h=120&fit=crop',
-        isVerified: true
+        // Un avis public n'est JAMAIS vérifié automatiquement — modération requise.
+        isVerified: false
       }
     })
 

@@ -1,7 +1,8 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireRestaurant } from '@/lib/auth'
 
-// GET - Dashboard statistics
+// GET - Dashboard statistics (protégé : staff du restaurant ou super_admin)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -10,6 +11,9 @@ export async function GET(request: NextRequest) {
     if (!restaurantId) {
       return NextResponse.json({ error: 'Restaurant ID is required' }, { status: 400 })
     }
+
+    const auth = requireRestaurant(request, restaurantId, 'restaurant_owner', 'manager', 'staff')
+    if (auth instanceof NextResponse) return auth
 
     // Get date ranges
     const today = new Date()
@@ -30,9 +34,7 @@ export async function GET(request: NextRequest) {
         restaurantId,
         createdAt: { gte: today },
       },
-      include: {
-        items: true,
-      },
+      select: { id: true, total: true },
     })
 
     // Monthly orders
@@ -41,9 +43,7 @@ export async function GET(request: NextRequest) {
         restaurantId,
         createdAt: { gte: startOfMonth },
       },
-      include: {
-        items: true,
-      },
+      select: { id: true, total: true },
     })
 
     // Last month orders for comparison
@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
           lte: endOfLastMonth,
         },
       },
+      select: { id: true, total: true },
     })
 
     // Calculate revenue
@@ -76,13 +77,16 @@ export async function GET(request: NextRequest) {
       _count: true,
     })
 
-    // Top products
+    // Top products — une seule requête (plus de N+1)
     const orderItems = await db.orderItem.findMany({
       where: {
         product: { restaurantId },
       },
-      include: {
-        product: true,
+      select: {
+        productId: true,
+        quantity: true,
+        price: true,
+        product: { select: { name: true } },
       },
     })
 
@@ -118,26 +122,31 @@ export async function GET(request: NextRequest) {
       take: 10,
     })
 
-    // Daily revenue for the last 7 days
+    // Daily revenue for the last 7 days — UNE seule requête au lieu de 7
+    const sevenDaysAgo = new Date(today)
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+
+    const last7DaysOrders = await db.order.findMany({
+      where: {
+        restaurantId,
+        createdAt: { gte: sevenDaysAgo },
+      },
+      select: { total: true, createdAt: true },
+    })
+
     const last7Days: { date: string; revenue: number; orders: number }[] = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today)
       date.setDate(date.getDate() - i)
-      const nextDate = new Date(date)
-      nextDate.setDate(nextDate.getDate() + 1)
-
-      const dayOrders = await db.order.findMany({
-        where: {
-          restaurantId,
-          createdAt: {
-            gte: date,
-            lt: nextDate,
-          },
-        },
+      const dateKey = date.toISOString().split('T')[0]
+      const dayOrders = last7DaysOrders.filter(o => {
+        const d = new Date(o.createdAt)
+        return d.getFullYear() === date.getFullYear()
+          && d.getMonth() === date.getMonth()
+          && d.getDate() === date.getDate()
       })
-
       last7Days.push({
-        date: date.toISOString().split('T')[0],
+        date: dateKey,
         revenue: dayOrders.reduce((sum, o) => sum + o.total, 0),
         orders: dayOrders.length,
       })

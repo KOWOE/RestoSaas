@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireRole } from '@/lib/auth'
+import { getClientKey, rateLimit } from '@/lib/rate-limit'
 
+// POST /api/generate-image — réservé aux utilisateurs authentifiés (rate-limité)
+// La génération d'images IA a un coût : aucun accès anonyme.
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { prompt } = body
+    const auth = requireRole(request, 'restaurant_owner', 'manager', 'staff')
+    if (auth instanceof NextResponse) return auth
 
-    if (!prompt) {
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
+    // 10 générations / 10 min / utilisateur
+    const limit = rateLimit(`genimg:${auth.id}`, 10, 10 * 60_000)
+    if (!limit.ok) {
+      return NextResponse.json(
+        { error: 'Trop de générations d\'images. Réessayez plus tard.' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } }
+      )
+    }
+
+    const body = await request.json().catch(() => null)
+    const prompt = typeof body?.prompt === 'string' ? body.prompt.trim() : ''
+    if (!prompt || prompt.length < 3 || prompt.length > 500) {
+      return NextResponse.json({ error: 'Prompt is required (3-500 caractères)' }, { status: 400 })
     }
 
     // Use the z-ai-web-dev-sdk to generate an image

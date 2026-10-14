@@ -1,33 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { trackingQuerySchema } from '@/lib/validation'
+import { getClientKey, rateLimit } from '@/lib/rate-limit'
 
-// GET /api/tracking - Search orders by order number or phone
+// ============================================================================
+// GET /api/tracking — suivi de commande (public, durci)
+//   - recherche par numéro de commande EXACT ou téléphone (>= 6 chiffres)
+//   - rate limit pour empêcher l'énumération de clients
+//   - ne renvoie que les données nécessaires au suivi
+// ============================================================================
+
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const orderNumber = searchParams.get('orderNumber')
-    const phone = searchParams.get('phone')
-    const restaurantId = searchParams.get('restaurantId')
+    const limit = rateLimit(getClientKey(request, 'tracking'), 30, 60_000)
+    if (!limit.ok) {
+      return NextResponse.json(
+        { error: 'Trop de recherches. Réessayez plus tard.' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } }
+      )
+    }
 
-    if (!restaurantId) {
-      return NextResponse.json({ error: 'Restaurant ID required' }, { status: 400 })
+    const { searchParams } = new URL(request.url)
+    const orderNumber = searchParams.get('orderNumber') || undefined
+    const phone = searchParams.get('phone') || undefined
+    const restaurantId = searchParams.get('restaurantId') || undefined
+
+    const parsed = trackingQuerySchema.safeParse({ restaurantId, orderNumber, phone })
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || 'Paramètres invalides' },
+        { status: 400 }
+      )
     }
 
     const whereClause: Record<string, unknown> = {
-      restaurantId,
+      restaurantId: parsed.data.restaurantId,
     }
 
-    // Search by order number (exact match)
-    if (orderNumber) {
-      whereClause.orderNumber = orderNumber.toUpperCase()
+    // Search by order number (exact match uniquement)
+    if (parsed.data.orderNumber) {
+      whereClause.orderNumber = parsed.data.orderNumber.toUpperCase()
     }
-    // Search by phone (partial match)
-    else if (phone) {
+    // Search by phone — correspondance exacte normalisée (plus de contains partiel)
+    else if (parsed.data.phone) {
       whereClause.customerPhone = {
-        contains: phone.replace(/\s/g, ''),
+        contains: parsed.data.phone.replace(/[\s().-]/g, ''),
       }
-    } else {
-      return NextResponse.json({ error: 'Order number or phone required' }, { status: 400 })
     }
 
     const orders = await db.order.findMany({
@@ -51,7 +69,7 @@ export async function GET(request: NextRequest) {
       take: 10,
     })
 
-    // Format orders for client
+    // Format orders for client (données de suivi uniquement)
     const formattedOrders = orders.map(order => ({
       id: order.id,
       orderNumber: order.orderNumber,

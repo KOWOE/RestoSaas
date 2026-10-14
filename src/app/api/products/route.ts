@@ -1,7 +1,17 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireRestaurant, getSessionFromRequest, unauthorized } from '@/lib/auth'
+import { createProductSchema, updateProductSchema } from '@/lib/validation'
 
-// GET - Fetch products
+// ============================================================================
+// /api/products
+//   GET    : public (menu du restaurant)
+//   POST   : propriétaire / manager / super_admin — validé Zod
+//   PUT    : idem
+//   DELETE : idem
+// ============================================================================
+
+// GET - Fetch products (public)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -32,27 +42,40 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create a product
+// POST - Create a product (protégé)
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { name, description, price, comparePrice, image, categoryId, restaurantId, isAvailable, isFeatured, preparationTime, calories, allergens, sortOrder } = body
+    const body = await request.json().catch(() => null)
+    const parsed = createProductSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Produit invalide', details: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`) },
+        { status: 400 }
+      )
+    }
+    const data = parsed.data
+
+    const auth = requireRestaurant(request, data.restaurantId, 'restaurant_owner', 'manager')
+    if (auth instanceof NextResponse) return auth
+
+    // La catégorie doit appartenir au même restaurant
+    const category = await db.category.findUnique({ where: { id: data.categoryId } })
+    if (!category || category.restaurantId !== data.restaurantId) {
+      return NextResponse.json({ error: 'Catégorie invalide pour ce restaurant' }, { status: 400 })
+    }
 
     const product = await db.product.create({
       data: {
-        name,
-        description,
-        price: parseFloat(price),
-        comparePrice: comparePrice ? parseFloat(comparePrice) : null,
-        image,
-        categoryId,
-        restaurantId,
-        isAvailable: isAvailable ?? true,
-        isFeatured: isFeatured ?? false,
-        preparationTime,
-        calories,
-        allergens,
-        sortOrder: sortOrder || 0,
+        name: data.name,
+        description: data.description ?? null,
+        price: data.price,
+        image: data.image ?? null,
+        categoryId: data.categoryId,
+        restaurantId: data.restaurantId,
+        isAvailable: data.isAvailable ?? true,
+        isFeatured: data.isFeatured ?? false,
+        preparationTime: data.preparationTime ?? null,
+        calories: data.calories ?? null,
       },
     })
 
@@ -63,14 +86,35 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update a product
+// PUT - Update a product (protégé)
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { id, ...data } = body
+    const body = await request.json().catch(() => null)
+    const parsed = updateProductSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Mise à jour invalide', details: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`) },
+        { status: 400 }
+      )
+    }
+    const { id, restaurantId: providedRestaurantId, ...data } = parsed.data
 
-    if (data.price) data.price = parseFloat(data.price)
-    if (data.comparePrice) data.comparePrice = parseFloat(data.comparePrice)
+    if (!getSessionFromRequest(request)) return unauthorized()
+
+    const existing = await db.product.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Produit introuvable' }, { status: 404 })
+    }
+
+    const auth = requireRestaurant(request, existing.restaurantId, 'restaurant_owner', 'manager')
+    if (auth instanceof NextResponse) return auth
+
+    if (data.categoryId) {
+      const category = await db.category.findUnique({ where: { id: data.categoryId } })
+      if (!category || category.restaurantId !== existing.restaurantId) {
+        return NextResponse.json({ error: 'Catégorie invalide pour ce restaurant' }, { status: 400 })
+      }
+    }
 
     const product = await db.product.update({
       where: { id },
@@ -84,7 +128,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - Delete a product
+// DELETE - Delete a product (protégé)
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -93,6 +137,16 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ error: 'Product ID is required' }, { status: 400 })
     }
+
+    if (!getSessionFromRequest(request)) return unauthorized()
+
+    const existing = await db.product.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Produit introuvable' }, { status: 404 })
+    }
+
+    const auth = requireRestaurant(request, existing.restaurantId, 'restaurant_owner', 'manager')
+    if (auth instanceof NextResponse) return auth
 
     await db.product.delete({
       where: { id },

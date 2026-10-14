@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireRole } from '@/lib/auth'
 
 // Seed initial partner restaurants
 const INITIAL_DEMO_RESTAURANTS = [
@@ -105,6 +106,10 @@ const INITIAL_DEMO_RESTAURANTS = [
 // ==========================================
 export async function GET(request: NextRequest) {
   try {
+    // Back-office fondateur : super_admin uniquement
+    const auth = requireRole(request)
+    if (auth instanceof NextResponse) return auth
+
     let dbRestaurants: any[] = []
     let dbOrders: any[] = []
     let totalDbOrders = 0
@@ -291,6 +296,10 @@ export async function GET(request: NextRequest) {
 // ==========================================
 export async function POST(request: NextRequest) {
   try {
+    // Back-office fondateur : super_admin uniquement
+    const auth = requireRole(request)
+    if (auth instanceof NextResponse) return auth
+
     const body = await request.json()
     const {
       name,
@@ -464,6 +473,10 @@ export async function POST(request: NextRequest) {
 // ==========================================
 export async function PUT(request: NextRequest) {
   try {
+    // Back-office fondateur : super_admin uniquement
+    const auth = requireRole(request)
+    if (auth instanceof NextResponse) return auth
+
     const body = await request.json()
     const { id, isActive, plan, name, phone, city, country } = body
 
@@ -504,6 +517,10 @@ export async function PUT(request: NextRequest) {
 // ==========================================
 export async function DELETE(request: NextRequest) {
   try {
+    // Back-office fondateur : super_admin uniquement
+    const auth = requireRole(request)
+    if (auth instanceof NextResponse) return auth
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 

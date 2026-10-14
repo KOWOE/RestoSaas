@@ -1,7 +1,17 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireRestaurant, getSessionFromRequest, unauthorized } from '@/lib/auth'
+import { createCategorySchema, updateCategorySchema } from '@/lib/validation'
 
-// GET - Fetch categories
+// ============================================================================
+// /api/categories
+//   GET    : public (menu du restaurant)
+//   POST   : propriétaire / manager / super_admin — validé Zod
+//   PUT    : idem
+//   DELETE : idem
+// ============================================================================
+
+// GET - Fetch categories (public)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -29,20 +39,30 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create a category
+// POST - Create a category (protégé)
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { name, description, image, icon, restaurantId, sortOrder } = body
+    const body = await request.json().catch(() => null)
+    const parsed = createCategorySchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Catégorie invalide', details: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`) },
+        { status: 400 }
+      )
+    }
+    const data = parsed.data
+
+    const auth = requireRestaurant(request, data.restaurantId, 'restaurant_owner', 'manager')
+    if (auth instanceof NextResponse) return auth
 
     const category = await db.category.create({
       data: {
-        name,
-        description,
-        image,
-        icon,
-        restaurantId,
-        sortOrder: sortOrder || 0,
+        name: data.name,
+        description: data.description ?? null,
+        image: data.image ?? null,
+        icon: data.icon ?? null,
+        restaurantId: data.restaurantId,
+        sortOrder: data.sortOrder || 0,
       },
     })
 
@@ -53,11 +73,28 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update a category
+// PUT - Update a category (protégé)
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { id, ...data } = body
+    const body = await request.json().catch(() => null)
+    const parsed = updateCategorySchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Mise à jour invalide', details: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`) },
+        { status: 400 }
+      )
+    }
+    const { id, restaurantId: _ignored, ...data } = parsed.data
+
+    if (!getSessionFromRequest(request)) return unauthorized()
+
+    const existing = await db.category.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Catégorie introuvable' }, { status: 404 })
+    }
+
+    const auth = requireRestaurant(request, existing.restaurantId, 'restaurant_owner', 'manager')
+    if (auth instanceof NextResponse) return auth
 
     const category = await db.category.update({
       where: { id },
@@ -71,7 +108,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - Delete a category
+// DELETE - Delete a category (protégé)
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -80,6 +117,16 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ error: 'Category ID is required' }, { status: 400 })
     }
+
+    if (!getSessionFromRequest(request)) return unauthorized()
+
+    const existing = await db.category.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Catégorie introuvable' }, { status: 404 })
+    }
+
+    const auth = requireRestaurant(request, existing.restaurantId, 'restaurant_owner', 'manager')
+    if (auth instanceof NextResponse) return auth
 
     await db.category.delete({
       where: { id },

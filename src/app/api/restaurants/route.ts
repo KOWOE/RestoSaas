@@ -1,13 +1,24 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireRestaurant, requireRole, forbidden, unauthorized } from '@/lib/auth'
+import { createRestaurantSchema, updateRestaurantSchema } from '@/lib/validation'
 
-// GET - Fetch all restaurants or a specific restaurant
+// ============================================================================
+// /api/restaurants
+//   GET    : public par slug (menu) ; par id = auth + propriétaire ; liste = auth
+//   POST   : super_admin uniquement
+//   PUT    : propriétaire du restaurant ou super_admin
+//   DELETE : propriétaire du restaurant ou super_admin
+// ============================================================================
+
+// GET - Fetch restaurants
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const slug = searchParams.get('slug')
     const id = searchParams.get('id')
 
+    // Public : menu du restaurant par slug (catégories + produits + tables)
     if (slug) {
       const restaurant = await db.restaurant.findUnique({
         where: { slug },
@@ -30,6 +41,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (id) {
+      // Protégé : uniquement le propriétaire (ou super_admin) — plus de fuite `users`
+      const auth = requireRestaurant(request, id, 'restaurant_owner', 'manager')
+      if (auth instanceof NextResponse) return auth
+
       const restaurant = await db.restaurant.findUnique({
         where: { id },
         include: {
@@ -42,16 +57,28 @@ export async function GET(request: NextRequest) {
             },
           },
           tables: true,
-          users: true,
         },
       })
       return NextResponse.json(restaurant)
     }
 
-    // Get all restaurants
+    // Liste : réservée aux utilisateurs authentifiés (super_admin voit tout,
+    // un gérant ne voit que son restaurant)
+    const auth = requireRole(request, 'restaurant_owner', 'manager')
+    if (auth instanceof NextResponse) return auth
+
+    const where = auth.role === 'super_admin' ? { isActive: true } : { id: auth.restaurantId || '__none__' }
     const restaurants = await db.restaurant.findMany({
-      where: { isActive: true },
+      where,
       orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        plan: true,
+        isActive: true,
+        createdAt: true,
+      },
     })
     return NextResponse.json(restaurants)
   } catch (error) {
@@ -60,11 +87,21 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create a new restaurant
+// POST - Create a new restaurant (super_admin)
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { name, slug, description, address, phone, email, currency, taxRate, plan, serviceType, orderModes } = body
+    const auth = requireRole(request)
+    if (auth instanceof NextResponse) return auth
+
+    const body = await request.json().catch(() => null)
+    const parsed = createRestaurantSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Données invalides', details: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`) },
+        { status: 400 }
+      )
+    }
+    const { name, slug, description, address, phone, email, currency, taxRate, plan, serviceType, orderModes } = parsed.data
 
     const restaurant = await db.restaurant.create({
       data: {
@@ -75,7 +112,7 @@ export async function POST(request: NextRequest) {
         phone,
         email,
         currency: currency || 'XOF',
-        taxRate: taxRate || 0.18,
+        taxRate: taxRate ?? 0.18,
         plan: plan || 'basic',
         serviceType: serviceType || 'both',
         orderModes: orderModes || (serviceType === 'online' ? 'takeaway,delivery' : 'dine_in,takeaway,delivery'),
@@ -89,11 +126,27 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update a restaurant
+// PUT - Update a restaurant (propriétaire ou super_admin)
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { id, ...data } = body
+    const body = await request.json().catch(() => null)
+    const parsed = updateRestaurantSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Données invalides', details: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`) },
+        { status: 400 }
+      )
+    }
+    const { id, ...data } = parsed.data
+
+    const auth = requireRestaurant(request, id, 'restaurant_owner', 'manager')
+    if (auth instanceof NextResponse) return auth
+
+    // Un non-super_admin ne peut pas changer isActive / plan lui-même
+    if (auth.role !== 'super_admin') {
+      delete (data as Record<string, unknown>).isActive
+      delete (data as Record<string, unknown>).plan
+    }
 
     const restaurant = await db.restaurant.update({
       where: { id },
@@ -107,7 +160,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - Delete a restaurant
+// DELETE - Delete a restaurant (propriétaire ou super_admin)
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -116,6 +169,9 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ error: 'Restaurant ID is required' }, { status: 400 })
     }
+
+    const auth = requireRestaurant(request, id, 'restaurant_owner')
+    if (auth instanceof NextResponse) return auth
 
     await db.restaurant.delete({
       where: { id },

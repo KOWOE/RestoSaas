@@ -1,11 +1,33 @@
 import { db } from '@/lib/db'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getClientKey, rateLimit } from '@/lib/rate-limit'
 
-// Seed demo data
-export async function GET() {
+// ============================================================================
+// POST /api/seed — peuplement de la base de démonstration
+//   PROTÉGÉ : autorisé uniquement si
+//     1. la base est vide (premier démarrage), OU
+//     2. l'en-tête x-seed-token correspond à SEED_TOKEN, OU
+//     3. NODE_ENV !== 'production' (développement)
+// ============================================================================
+
+export async function POST(request: NextRequest) {
   try {
+    const limit = rateLimit(getClientKey(request, 'seed'), 3, 10 * 60_000)
+    if (!limit.ok) {
+      return NextResponse.json({ error: 'Trop de tentatives.' }, { status: 429 })
+    }
+
     // Check if we already have data
     const existingRestaurants = await db.restaurant.count()
+
+    const seedToken = process.env.SEED_TOKEN
+    const providedToken = request.headers.get('x-seed-token')
+    const isDev = process.env.NODE_ENV !== 'production'
+    const tokenOk = Boolean(seedToken) && Boolean(providedToken) && providedToken === seedToken
+
+    if (existingRestaurants > 0 && !tokenOk && !isDev) {
+      return NextResponse.json({ error: 'Seeding non autorisé.' }, { status: 403 })
+    }
     if (existingRestaurants > 0) {
       return NextResponse.json({ message: 'Database already seeded', alreadySeeded: true })
     }
