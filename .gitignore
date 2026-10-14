@@ -41,3 +41,6 @@ npm-debug.log*
 # Test & coverage
 coverage/
 test-results/
+
+# Checklist locale contenant des secrets — ne jamais commiter
+CHECKLIST-VERCEL.md
