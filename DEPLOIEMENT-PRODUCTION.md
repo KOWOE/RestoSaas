@@ -9,18 +9,24 @@
 
 # Option A — Vercel (✅ recommandée)
 
-## A1. Créer la base PostgreSQL (5 min, gratuit)
+## A1. Créer la base Supabase (5 min, gratuit)
 
-1. Créez un compte sur **[neon.tech](https://neon.tech)** (ou Supabase)
-2. Créez un projet → copiez l'URL de connexion type :
-   ```
-   postgresql://user:password@ep-xxx.aws.neon.tech/neondb?sslmode=require
-   ```
+1. Créez un projet sur **[supabase.com](https://supabase.com)** (plan Free suffisant)
+2. **Project Settings → Database → Connection string → URI**
+   - Sélectionnez le mode **« Session »** (recommandé avec Prisma)
+   - Copiez l'URL type :
+     ```
+     postgresql://postgres.PROJECT:VOTRE_MDP@aws-0-xx.pooler.supabase.com:5432/postgres
+     ```
+   - ⚠️ Elle contient votre **mot de passe** : collez-la directement dans Vercel (A3),
+     ne la faites pas circuler par email/chat.
 3. Testez-la depuis votre machine :
    ```bash
    DATABASE_URL="postgresql://..." npx prisma db push
    ```
    → `Your database is now in sync with your schema` ✅
+
+> Alternative : Neon, ElephantSQL, ou tout PostgreSQL hébergé — le schéma est standard.
 
 ## A2. Connecter le dépôt à Vercel (5 min)
 
@@ -39,12 +45,13 @@ et *Preview* si vous voulez tester) :
 
 | Name | Value |
 |---|---|
-| `DATABASE_URL` | l'URL PostgreSQL Neon (A1) |
+| `DATABASE_URL` | l'URL PostgreSQL **Supabase** (mode Session, A1) |
 | `SESSION_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
 | `ADMIN_EMAIL` | email du super-admin (**obligatoire en prod**) |
 | `ADMIN_PASSWORD` | mot de passe fort (**obligatoire en prod**) |
 | `MONEROO_SECRET_KEY` | votre clé `pvk_…` |
-| `MONEROO_WEBHOOK_SECRET` | secret `ih_…` du webhook (A4) |
+| `MONEROO_WEBHOOK_URL` | `https://hooks.moneroo.io/ho_s5e1oxk8847i` |
+| `MONEROO_WEBHOOK_SECRET` | secret `ih_…` affiché avec le webhook (A4) |
 | `NEXT_PUBLIC_APP_URL` | `https://votre-projet.vercel.app` (ou domaine custom) |
 | `WEBHOOK_ALLOW_UNSIGNED` | `false` |
 | `MONEROO_URL` | `https://api.moneroo.io/v1/payments/initialize` |
@@ -60,11 +67,20 @@ echo "votre-cle-pvk"   | vercel env add MONEROO_SECRET_KEY production
 
 ## A4. Configurer le webhook Moneroo
 
-Dans la console Moneroo → **Webhooks** :
-- URL : `https://votre-projet.vercel.app/api/webhooks/moneroo`
-- Événements : `payment.success`, `payment.failed`
-- Copiez le secret (`ih_…`) dans `MONEROO_WEBHOOK_SECRET` sur Vercel
-- **Send test event** → réponse attendue `200 {"received":true}`
+Votre webhook `https://hooks.moneroo.io/ho_s5e1oxk8847i` a été créé dans la console Moneroo.
+Vérifiez ces **3 éléments** dans la console (section *Webhooks*) :
+
+| Élément | Valeur attendue |
+|---|---|
+| **URL de destination** (endpoint) | `https://votre-projet.vercel.app/api/webhooks/moneroo` ← c'est Moneroo qui **appelle** votre app ici |
+| **Identifiant du hook** | `https://hooks.moneroo.io/ho_s5e1oxk8847i` (celui que vous venez de me donner) |
+| **Secret de signature** (`ih_…`) | copié tel quel dans `MONEROO_WEBHOOK_SECRET` sur Vercel (A3) |
+
+Événements à activer : `payment.success`, `payment.failed`.
+
+**Test** : bouton **« Send test event »** de la console → votre app doit répondre
+`200 {"received":true}`. Si vous obtenez `401` → le secret `ih_…` de Vercel ne correspond pas
+à celui de la console. Si `503` → `MONEROO_WEBHOOK_SECRET` absent de Vercel.
 
 ## A5. Déployer
 
@@ -93,8 +109,9 @@ curl -o /dev/null -w "%{http_code}\n" -X POST $APP/api/webhooks/moneroo -d '{}'
 - [ ] **Révoquez la clé `pvk_…` qui a circulé dans un chat**, créez-en une nouvelle
       dans la console Moneroo, mettez à jour `MONEROO_SECRET_KEY` sur Vercel, Redeploy
 - [ ] Idem pour le secret webhook `ih_…` s'il a circulé hors console
+- [ ] Base Supabase : activer les backups (Database → Backups) et **Row Level Security**
+      si vous exposez la base via Supabase API plus tard (pas besoin pour Prisma seul)
 - [ ] Domaine custom : Vercel → Settings → Domains (HTTPS automatique)
-- [ ] Base Neon : activer les backups / point-in-time restore
 - [ ] Demander aux propriétaires de changer leur mot de passe temporaire
 
 ---

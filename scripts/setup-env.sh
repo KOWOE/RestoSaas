@@ -77,7 +77,8 @@ echo ""
 echo "💳 Passerelle Moneroo / FedaPay"
 echo "   (clés créées/révoquées dans la console Moneroo → API Keys)"
 ask_secret "   MONEROO_SECRET_KEY" MONEROO_SECRET_KEY
-ask_secret "   MONEROO_WEBHOOK_SECRET" MONEROO_WEBHOOK_SECRET
+ask "   MONEROO_WEBHOOK_URL (hooks.moneroo.io/ho_…)" MONEROO_WEBHOOK_URL ""
+ask_secret "   MONEROO_WEBHOOK_SECRET (ih_…)" MONEROO_WEBHOOK_SECRET
 ask "   MONEROO_URL" MONEROO_URL "https://api.moneroo.io/v1/payments/initialize"
 ask "   MONEROO_VERIFY_URL" MONEROO_VERIFY_URL "https://api.moneroo.io/v1/payments"
 
@@ -104,6 +105,7 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD}"
 MONEROO_URL="${MONEROO_URL}"
 MONEROO_VERIFY_URL="${MONEROO_VERIFY_URL}"
 MONEROO_SECRET_KEY="${MONEROO_SECRET_KEY}"
+MONEROO_WEBHOOK_URL="${MONEROO_WEBHOOK_URL}"
 MONEROO_WEBHOOK_SECRET="${MONEROO_WEBHOOK_SECRET}"
 WEBHOOK_ALLOW_UNSIGNED="${WEBHOOK_ALLOW_UNSIGNED}"
 

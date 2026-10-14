@@ -122,6 +122,6 @@ Chaque phase est commitée séparément ; les éléments non réalisables dans c
 
 - [x] `prisma/schema.prisma` → `provider = "postgresql"` (SQLite ne persiste pas sur Vercel)
 - [x] `npm run vercel-build` : vérif variables d'env (`scripts/check-prod-env.mjs`) → `prisma generate` → `prisma db push` → `npm run build`
-- [x] `DEPLOIEMENT-PRODUCTION.md` : procédure Vercel complète (Neon, env vars, webhook Moneroo, vérifications)
+- [x] `DEPLOIEMENT-PRODUCTION.md` : procédure Vercel complète (Supabase, env vars, webhook Moneroo `ho_s5e1oxk8847i`, vérifications)
 - [x] `deploy/` : Caddyfile + service systemd (option VPS conservée)
-- [ ] **Humain** : créer la base Neon + renseigner les variables dans Vercel + webhook Moneroo (voir A1→A4)
+- [ ] **Humain** : base **Supabase** → coller l'URL (mode Session) + variables dans Vercel, webhook Moneroo configuré (`ho_s5e1oxk8847i`) avec secret `ih_…` (voir A1→A4)
