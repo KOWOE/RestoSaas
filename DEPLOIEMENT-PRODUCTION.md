@@ -45,7 +45,7 @@ et *Preview* si vous voulez tester) :
 
 | Name | Value |
 |---|---|
-| `DATABASE_URL` | l'URL PostgreSQL **Supabase** (mode Session, A1) |
+| `DATABASE_URL` | l'URL PostgreSQL **Supabase** (mode Session, A1) — ⚠️ différent des clés `NEXT_PUBLIC_SUPABASE_*` |
 | `SESSION_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
 | `ADMIN_EMAIL` | email du super-admin (**obligatoire en prod**) |
 | `ADMIN_PASSWORD` | mot de passe fort (**obligatoire en prod**) |
@@ -56,6 +56,8 @@ et *Preview* si vous voulez tester) :
 | `WEBHOOK_ALLOW_UNSIGNED` | `false` |
 | `MONEROO_URL` | `https://api.moneroo.io/v1/payments/initialize` |
 | `MONEROO_VERIFY_URL` | `https://api.moneroo.io/v1/payments` |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://lvzlijiluqejgtgbvtsz.supabase.co` (optionnel — Auth/Storage futurs) |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` (optionnel — clé publique) |
 
 Astuce CLI (alternative au dashboard) :
 ```bash
