@@ -1,0 +1,43 @@
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+
+# Databases
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Dependencies
+node_modules/
+
+# Next.js build
+.next/
+out/
+build/
+dist/
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+*.log
+server.log
+npm-debug.log*
+
+# PWA generated artifacts (regenerated at build)
+# NOTE: public/sw.js & workbox files are currently committed on purpose (demo deploy without build step)
+# public/sw.js
+# public/workbox-*.js
+# public/swe-worker-*.js
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Test & coverage
+coverage/
+test-results/
